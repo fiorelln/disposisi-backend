@@ -5,8 +5,9 @@ import (
     "github.com/fiorelln/disposisi/config"
 )
 
+
 func main() {
-    config.ConnectDatabase()
+      config.ConnectDB()
 
     r := gin.Default()
 
