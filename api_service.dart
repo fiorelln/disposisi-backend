@@ -30,6 +30,7 @@ class ApiService {
     };
   }
   
+  // validate email and password
   static Future<Map<String, dynamic>> login({
     required String email,
     required String password,
