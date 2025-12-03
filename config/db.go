@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/fiorelln/disposisi/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -38,6 +39,8 @@ func ConnectDB() {
 	if err != nil {
 		log.Fatal("Gagal terhubung ke database:", err)
 	}
+
+	DB.AutoMigrate(&models.User{})
 
 	log.Println("Database berhasil terhubung")
 }
