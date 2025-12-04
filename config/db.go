@@ -41,6 +41,7 @@ func ConnectDB() {
 	}
 
 	DB.AutoMigrate(&models.User{})
+	log.Println("Migrasi tabel berhasil")
 
 	log.Println("Database berhasil terhubung")
 }
