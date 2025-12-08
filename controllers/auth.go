@@ -19,7 +19,6 @@ func Register(c *gin.Context) {
         Password string `json:"password" binding:"required,min=8"`
         Role     string `json:"role" binding:"required"`
     }
-
     if err := c.ShouldBindJSON(&input); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
@@ -29,7 +28,7 @@ func Register(c *gin.Context) {
     c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memproses password"})
     return
 }
-
+	
     user := models.User{
         Name:     input.Name,
         Email:    input.Email,
