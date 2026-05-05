@@ -12,3 +12,5 @@ func AuthRoutes(r *gin.Engine) {
         auth.POST("/login", controllers.Login)
     }
 }
+
+
