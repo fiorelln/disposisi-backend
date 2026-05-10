@@ -18,7 +18,6 @@ var JwtKey []byte
 func ConnectDB() {
 	_ = godotenv.Load()
 
-	// JWT
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		log.Fatal("JWT_SECRET is not set")
