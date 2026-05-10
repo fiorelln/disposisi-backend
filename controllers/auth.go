@@ -1,4 +1,5 @@
 package controllers
+package helpers
 
 import (
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+	"regexp"
 )
 
 func Register(c *gin.Context) {
@@ -17,7 +19,6 @@ func Register(c *gin.Context) {
         Name     string `json:"name" binding:"required"`
         Email    string `json:"email" binding:"required,email"`
         Password string `json:"password" binding:"required,min=8"`
-        Role     string `json:"role" binding:"required"`
     }
     if err := c.ShouldBindJSON(&input); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -29,12 +30,30 @@ func Register(c *gin.Context) {
     return
 }
 	
+if !helpers.ValidatePassword(input.Password) {
+	c.JSON(http.StatusBadRequest, gin.H{
+		"error": "Password minimal 8 karakter dan harus mengandung huruf besar, kecil, dan angka",
+	})
+	return
+}
     user := models.User{
         Name:     input.Name,
         Email:    input.Email,
         Password: string(hashedPassword),
-        Role:     input.Role,
-    }
+var allowedRoles = map[string]bool{
+	"tu_admin":        true,
+	"kepala_tu":       true,
+	"kepsek":          true,
+	"waka_kurikulum":  true,
+	"waka_kesiswaan":  true,
+	"waka_humas":      true,
+	"waka_sarpras":    true,
+	"ketua_konseling": true,
+	"bk":              true,
+	"bkk":             true,
+	"koordinator":     true,
+	"prakerin":        true,
+}    }
     if err := config.DB.Create(&user).Error; err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Email sudah terdaftar"})
         return
@@ -65,10 +84,6 @@ func Login(c *gin.Context) {
 		return
 	}
 
-		if (user.Role == "tu" || user.Role == "kepsek") && user.Role != input.Role {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Role tidak sesuai, menunggu persetujuan"})
-		return
-	}
 
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -92,4 +107,15 @@ func Login(c *gin.Context) {
 			"role": user.Role,
 		},
 	})
+}
+
+func ValidatePassword(password string) bool {
+	hasUpper := regexp.MustCompile(`[A-Z]`).MatchString(password)
+	hasLower := regexp.MustCompile(`[a-z]`).MatchString(password)
+	hasNumber := regexp.MustCompile(`[0-9]`).MatchString(password)
+
+	return len(password) >= 8 &&
+		hasUpper &&
+		hasLower &&
+		hasNumber
 }
