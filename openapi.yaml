@@ -1,0 +1,791 @@
+﻿openapi: 3.0.3
+info:
+  title: Disposisi Backend API
+  description: Dokumentasi API untuk disposisi-backend - Sistem manajemen surat sekolah
+  version: 1.1.0
+  contact:
+    name: Dukungan API
+
+servers:
+  - url: http://localhost:7000
+    description: Server pengembangan lokal
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Autentikasi
+      summary: Login pengguna dengan email dan password
+      description: Autentikasi pengguna dan mengembalikan token JWT beserta detail user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: user@example.com
+              password: Password123
+      responses:
+        '200':
+          description: Login berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: JSON input tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Email atau password salah
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/users:
+    post:
+      tags:
+        - Users
+      summary: Daftarkan pengguna baru
+      description: Membuat akun user dengan jabatan yang ditentukan. Hanya untuk admin.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              name: Nama User
+              email: user@example.com
+              password: Passw0rdA
+              jabatans: [1, 2]
+      responses:
+        '200':
+          description: User berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+        '400':
+          description: Input tidak valid atau email sudah digunakan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token hilang atau tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Autentikasi
+      summary: Minta OTP untuk reset password
+      description: Mengirimkan OTP 6 digit ke email pengguna untuk reset password.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+            example:
+              email: user@example.com
+      responses:
+        '200':
+          description: OTP berhasil dikirim
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+        '400':
+          description: Input tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Email tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Limit OTP tercapai
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/verify-otp:
+    post:
+      tags:
+        - Autentikasi
+      summary: Verifikasi kode OTP
+      description: Memastikan OTP yang dikirim ke email valid dan belum digunakan.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyOTPRequest'
+            example:
+              email: user@example.com
+              otp: "123456"
+      responses:
+        '200':
+          description: OTP valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+        '400':
+          description: Input tidak valid, OTP salah, atau OTP kadaluarsa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Email tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/reset-password:
+    post:
+      tags:
+        - Autentikasi
+      summary: Reset password pengguna
+      description: Mengatur ulang password jika OTP telah diverifikasi dalam 5 menit terakhir.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+            example:
+              email: user@example.com
+              new_password: NewPass123
+      responses:
+        '200':
+          description: Password berhasil direset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+        '400':
+          description: Input tidak valid atau OTP belum diverifikasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Email tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /surat/upload:
+    post:
+      tags:
+        - Surat
+      summary: Unggah surat PDF
+      description: Mengunggah file PDF surat dengan metadata. Memerlukan autentikasi.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadSuratRequest'
+      responses:
+        '200':
+          description: Upload berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuratResponse'
+        '400':
+          description: Input tidak valid atau validasi file gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /surat/{surat_id}:
+    get:
+      tags:
+        - Surat
+      summary: Ambil surat berdasarkan ID
+      description: Mengambil detail surat lengkap. Memerlukan autentikasi.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: surat_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Surat ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuratDetailResponse'
+        '404':
+          description: Surat tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /surat:
+    get:
+      tags:
+        - Surat
+      summary: Daftar surat
+      description: Menampilkan surat untuk pengguna yang terautentikasi berdasarkan pengirim atau tujuan.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: kategori
+          in: query
+          schema:
+            type: string
+          description: Filter berdasarkan kategori surat
+        - name: status
+          in: query
+          schema:
+            type: string
+          description: Filter berdasarkan status surat
+      responses:
+        '200':
+          description: Daftar surat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSuratResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /disposisi:
+    post:
+      tags:
+        - Disposisi
+      summary: Buat disposisi
+      description: Membuat disposisi untuk surat. Memerlukan autentikasi dan role yang sesuai (Admin atau TU/Kepala TU/Kepala Sekolah).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDisposisiRequest'
+      responses:
+        '200':
+          description: Disposisi berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisposisiResponse'
+        '400':
+          description: Input tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Surat tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Akses ditolak karena role tidak sesuai
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - Disposisi
+      summary: Daftar disposisi
+      description: Menampilkan daftar disposisi sesuai peran pengguna.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+          description: Filter berdasarkan status disposisi
+      responses:
+        '200':
+          description: Daftar disposisi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListDisposisiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /disposisi/approve:
+    post:
+      tags:
+        - Disposisi
+      summary: Setujui atau tolak disposisi
+      description: Menyetujui atau menolak disposisi oleh Kepala Sekolah.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveDisposisiRequest'
+      responses:
+        '200':
+          description: Disposisi berhasil diproses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisposisiResponse'
+        '400':
+          description: Input tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Disposisi tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /disposisi/surat/{surat_id}:
+    get:
+      tags:
+        - Disposisi
+      summary: Ambil disposisi berdasarkan surat
+      description: Mengambil disposisi untuk surat tertentu.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: surat_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Disposisi ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisposisiResponse'
+        '404':
+          description: Disposisi tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /dashboard:
+    get:
+      tags:
+        - Dashboard
+      summary: Ringkasan dashboard berdasarkan jabatan
+      description: Menampilkan statistik surat dan disposisi sesuai role pengguna.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Ringkasan dashboard berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Header Authorization dengan skema Bearer JWT
+
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: Password123
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Token JWT yang berisi klaim user_id dan roles
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Nama User
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        jabatans:
+          type: array
+          items:
+            type: string
+          example: ["Kepala Sekolah", "BK"]
+
+    RegisterRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+        - jabatans
+      properties:
+        name:
+          type: string
+          example: Nama User
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          description: Minimal 8 karakter dengan huruf besar, kecil, dan angka
+          example: Passw0rdA
+        jabatans:
+          type: array
+          items:
+            type: integer
+          description: Array ID jabatan. Elemen pertama dianggap utama
+          example: [1, 2]
+
+    ForgotPasswordRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+
+    VerifyOTPRequest:
+      type: object
+      required:
+        - email
+        - otp
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        otp:
+          type: string
+          description: Kode OTP 6 digit
+          example: "123456"
+
+    ResetPasswordRequest:
+      type: object
+      required:
+        - email
+        - new_password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        new_password:
+          type: string
+          description: Minimal 8 karakter dengan huruf besar, kecil, dan angka
+          example: NewPass123
+
+    UploadSuratRequest:
+      type: object
+      required:
+        - file
+        - kategori
+        - judul
+        - tujuan_id
+      properties:
+        file:
+          type: string
+          format: binary
+          description: File PDF surat
+        kategori:
+          type: string
+          description: Kategori surat
+          example: "masuk"
+        judul:
+          type: string
+          description: Judul surat
+          example: "Surat Dinas"
+        deskripsi:
+          type: string
+          description: Deskripsi surat
+          example: "Deskripsi surat"
+        tujuan_id:
+          type: integer
+          description: ID user tujuan surat
+          example: 1
+
+    SuratResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Upload surat berhasil
+        surat:
+          $ref: '#/components/schemas/Surat'
+
+    SuratDetailResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Surat'
+
+    ListSuratResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Surat'
+
+    Surat:
+      type: object
+      properties:
+        id:
+          type: integer
+        file_surat:
+          type: string
+          example: uploads/surat/1234567890_document.pdf
+        status:
+          type: string
+          example: dikirim
+        tujuan_id:
+          type: integer
+        pengirim_id:
+          type: integer
+        kategori:
+          type: string
+        judul:
+          type: string
+        deskripsi:
+          type: string
+        pengirim:
+          $ref: '#/components/schemas/UserSimple'
+        tujuan:
+          $ref: '#/components/schemas/UserSimple'
+        disposisi:
+          $ref: '#/components/schemas/Disposisi'
+
+    UserSimple:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+
+    Disposisi:
+      type: object
+      properties:
+        id:
+          type: integer
+        surat_id:
+          type: integer
+        tujuan_id:
+          type: integer
+        verifikator_id:
+          type: integer
+        tujuan:
+          type: string
+        catatan:
+          type: string
+        status:
+          type: string
+        verifikasi_status:
+          type: string
+        surat:
+          $ref: '#/components/schemas/Surat'
+        tujuan_user:
+          $ref: '#/components/schemas/UserSimple'
+        verifikator:
+          $ref: '#/components/schemas/UserSimple'
+
+    CreateDisposisiRequest:
+      type: object
+      required:
+        - surat_id
+        - tujuan_id
+        - tujuan
+      properties:
+        surat_id:
+          type: integer
+          example: 1
+        tujuan_id:
+          type: integer
+          example: 2
+        tujuan:
+          type: string
+          example: "Kepala Sekolah"
+        catatan:
+          type: string
+          example: "Mohon segera ditindaklanjuti"
+
+    ApproveDisposisiRequest:
+      type: object
+      required:
+        - disposisi_id
+        - is_approved
+      properties:
+        disposisi_id:
+          type: integer
+          example: 1
+        is_approved:
+          type: boolean
+          example: true
+        catatan:
+          type: string
+          example: "Disetujui untuk diteruskan"
+
+    DisposisiResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        disposisi:
+          $ref: '#/components/schemas/Disposisi'
+
+    ListDisposisiResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Disposisi'
+
+    SuccessMessage:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Success message
+
+    DashboardResponse:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        roles:
+          type: array
+          items:
+            type: string
+        summary:
+          type: object
+          properties:
+            total_surat:
+              type: integer
+            total_disposisi:
+              type: integer
+            pending_disposisi:
+              type: integer
+            approval_pending:
+              type: integer
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Error message

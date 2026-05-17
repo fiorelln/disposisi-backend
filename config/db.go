@@ -46,7 +46,14 @@ func ConnectDB() {
 		log.Fatal("Gagal terhubung ke database:", err)
 	}
 
-	if err := DB.AutoMigrate(&models.User{}); err != nil {
+	if err := DB.AutoMigrate(
+		&models.User{},
+		&models.Jabatan{},
+		&models.UserJabatan{},
+		&models.OTP{},
+		&models.Surat{},
+		&models.Disposisi{},
+	); err != nil {
 		log.Fatal("AutoMigrate gagal:", err)
 	}
 	sqlDB, err := DB.DB()

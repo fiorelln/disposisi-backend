@@ -1,3 +1,110 @@
-Aplikasi disposisi surat SMK 2 Singosari adalah sistem internal untuk mengelola surat secara digital agar tidak perlu pengiriman surat secara fisik antar bagian. Dalam sistem ini terdapat lima staff Tata Usaha (TU), di mana dua orang berperan sebagai admin (setara admin utama dan cadangan) yang hanya mengelola akun user, sedangkan tiga lainnya berperan sebagai pengirim surat. User lain terdiri dari berbagai jabatan seperti Kepala TU, Kepala Sekolah, Wakil Kepala Sekolah (Kurikulum, Kesiswaan, Humas, Sarpras), BK (Bimbingan Konseling), BKK, Koordinator, dan Prakerin, dan satu user dapat memiliki lebih dari satu jabatan. Setelah login, setiap user akan masuk ke dashboard sesuai jabatan yang dimilikinya, di mana surat akan masuk berdasarkan kategori atau tujuan surat, misalnya jika surat ditujukan ke BK maka akan masuk ke dashboard BK, dan jika user memiliki lebih dari satu jabatan maka semua surat dari setiap jabatan tersebut akan tampil sesuai kategori masing-masing. Kepala Sekolah berperan memberikan keputusan akhir berupa setuju atau tidak setuju, sementara TU bertugas mengirim surat. Semua surat disimpan berdasarkan kategori, memiliki status, riwayat, dan arsip, serta dapat dicari menggunakan filter hingga tiga tahun terakhir. Sistem juga dilengkapi OTP, reset password, dan reset OTP untuk keamanan, dengan tujuan mempercepat alur surat, mengurangi proses manual, dan memastikan setiap surat terdokumentasi serta mudah ditelusuri berdasarkan kategori dan hak akses masing-masing user.
+# Disposisi Backend
 
-README NYA AI YAHH YG NYUSUNN 
+Backend ini adalah sistem manajemen surat digital untuk SMK 2 Singosari yang menyediakan:
+
+- autentikasi JWT
+- manajemen user dan jabatan
+- permintaan OTP untuk reset password
+- upload surat PDF
+- pembuatan dan persetujuan disposisi
+- dokumentasi OpenAPI
+
+## Prasyarat
+
+Pastikan sudah terpasang:
+
+- Go 1.20 atau lebih baru
+- PostgreSQL
+- `git`
+
+## Konfigurasi
+
+Buat file `.env` di root proyek dengan variabel berikut:
+
+```bash
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=secret
+DB_NAME=disposisi_db
+DB_SSLMODE=disable
+JWT_SECRET=supersecretjwt
+RESEND_API_KEY=<api-key-resend>
+RESEND_EMAIL=<email-pengirim>
+```
+
+## Inisialisasi
+
+1. Clone repositori:
+
+   ```bash
+   git clone https://example.com/your-repo.git
+   cd disposisi-backend
+   ```
+
+2. Install dependensi Go:
+
+   ```bash
+   go mod tidy
+   ```
+
+3. Siapkan database PostgreSQL:
+
+   - Buat database sesuai `DB_NAME`.
+   - Pastikan kredensial `.env` cocok.
+
+4. Jalankan aplikasi:
+
+   ```bash
+   go run main.go
+   ```
+
+Aplikasi akan berjalan di `http://localhost:7000`.
+
+## Endpoint Dokumentasi
+
+- `GET /docs` untuk halaman dokumentasi
+- `GET /openapi.yaml` untuk file OpenAPI
+
+## Endpoint Tambahan
+
+- `GET /dashboard` untuk ringkasan dashboard berdasarkan jabatan
+
+## Fitur Utama yang Sudah Selesai
+
+1. Autentikasi dan otorisasi:
+   - `POST /auth/login`
+   - `POST /admin/users`
+   - Login menghasilkan JWT dengan klaim `user_id` dan `roles`
+
+2. Manajemen OTP dan reset password:
+   - `POST /auth/forgot-password`
+   - `POST /auth/verify-otp`
+   - `POST /auth/reset-password`
+   - Batas 5 OTP dalam 25 menit dan OTP kadaluarsa 2 menit
+
+3. Upload dan manajemen surat:
+   - `POST /surat/upload`
+   - `GET /surat/:surat_id`
+   - `GET /surat`
+   - Validasi file PDF dan ukuran maksimal 5MB
+
+4. Disposisi surat:
+   - `POST /disposisi` (hanya role Admin, TU, Kepala TU, Kepala Sekolah)
+   - `POST /disposisi/approve` (hanya Kepala Sekolah)
+   - `GET /disposisi/surat/:surat_id`
+   - `GET /disposisi`
+
+5. Dashboard berdasarkan jabatan:
+   - `GET /dashboard`
+   - Menampilkan ringkasan surat, disposisi, dan persetujuan yang perlu diproses
+
+6. Kontrol akses berbasis peran:
+   - Endpoint registrasi user hanya untuk role `Admin`
+   - Endpoint approve disposisi hanya untuk role `Kepala Sekolah`
+
+## Catatan
+
+- Form `POST /surat/upload` harus mengirimkan field `file`, `kategori`, `judul`, `deskripsi`, dan `tujuan_id`.
+- Email harus valid pada registrasi, login, OTP, dan reset password.
+- Gunakan token `Authorization: Bearer <token>` pada endpoint yang dilindungi.

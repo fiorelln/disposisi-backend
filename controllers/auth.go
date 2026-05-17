@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/fiorelln/disposisi/config"
@@ -29,6 +30,16 @@ func ValidatePassword(password string) bool {
 		hasNumber
 }
 
+func ValidateEmail(email string) bool {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return false
+	}
+
+	regex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+	return regex.MatchString(email)
+}
+
 func Register(c *gin.Context) {
 
 	var input struct {
@@ -41,6 +52,20 @@ func Register(c *gin.Context) {
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(400, gin.H{
 			"error": err.Error(),
+		})
+		return
+	}
+
+	if strings.TrimSpace(input.Name) == "" {
+		c.JSON(400, gin.H{
+			"error": "Nama user wajib diisi",
+		})
+		return
+	}
+
+	if !ValidateEmail(input.Email) {
+		c.JSON(400, gin.H{
+			"error": "Format email tidak valid",
 		})
 		return
 	}
@@ -111,6 +136,11 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	if !ValidateEmail(input.Email) {
+		c.JSON(400, gin.H{"error": "Format email tidak valid"})
+		return
+	}
+
 	var user models.User
 
 	if err := config.DB.
@@ -167,6 +197,11 @@ func ForgotPassword(c *gin.Context) {
 		c.JSON(400, gin.H{
 			"error": err.Error(),
 		})
+		return
+	}
+
+	if !ValidateEmail(input.Email) {
+		c.JSON(400, gin.H{"error": "Format email tidak valid"})
 		return
 	}
 
@@ -273,6 +308,11 @@ func VerifyOTP(c *gin.Context) {
 		return
 	}
 
+	if !ValidateEmail(input.Email) {
+		c.JSON(400, gin.H{"error": "Format email tidak valid"})
+		return
+	}
+
 	var user models.User
 
 	if err := config.DB.
@@ -328,6 +368,11 @@ func ResetPassword(c *gin.Context) {
 		return
 	}
 
+	if !ValidateEmail(input.Email) {
+		c.JSON(400, gin.H{"error": "Format email tidak valid"})
+		return
+	}
+
 	if !ValidatePassword(input.NewPassword) {
 		c.JSON(400, gin.H{
 			"error": "Password minimal 8 karakter, huruf besar, kecil, dan angka",
@@ -343,6 +388,19 @@ func ResetPassword(c *gin.Context) {
 
 		c.JSON(404, gin.H{
 			"error": "Email tidak ditemukan",
+		})
+		return
+	}
+
+	// Verifikasi bahwa ada OTP yang sudah diverifikasi dalam 5 menit terakhir
+	var verifiedOTP models.OTP
+
+	if err := config.DB.
+		Where("user_id = ? AND is_used = ? AND created_at > ?", user.ID, true, time.Now().Add(-5*time.Minute)).
+		Last(&verifiedOTP).Error; err != nil {
+
+		c.JSON(400, gin.H{
+			"error": "OTP belum diverifikasi atau sudah expired",
 		})
 		return
 	}
