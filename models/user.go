@@ -1,18 +1,17 @@
 package models
 
-import (
-    "time"
-    "gorm.io/gorm"
-)
+import "time"
 
 type User struct {
-    ID        uint           `gorm:"primaryKey" json:"id"`
-    Name      string         `json:"name"`
-    Email     string         `gorm:"unique;not null" json:"email"`
-    Password  string         `json:"-"` 
-    Role      string         `gorm:"type:user_role;default:'guru'" json:"role"`
-    Status    string         `gorm:"type:varchar(20);default:'pending'" json:"status"`
-    CreatedAt time.Time      `json:"created_at"`
-    UpdatedAt time.Time      `json:"updated_at"`
-    DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	ID        uint           `gorm:"primaryKey;column:id_user" json:"id"`
+	Name      string         `gorm:"column:nama" json:"name"`
+	Email     string         `gorm:"unique;not null" json:"email"`
+	Password  string         `gorm:"column:password" json:"-"`
+	CreatedAt time.Time      `gorm:"column:created_at" json:"created_at"`
+
+	Jabatans  []UserJabatan `gorm:"foreignKey:UserID" json:"jabatans"`
+}
+
+func (User) TableName() string {
+	return "users"
 }

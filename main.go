@@ -1,31 +1,48 @@
 package main
 
 import (
-    "github.com/gin-gonic/gin"
-    "github.com/fiorelln/disposisi/config"
-    "github.com/fiorelln/disposisi/routes"
+	"log"
 
-    "github.com/gin-contrib/cors" 
+	"github.com/fiorelln/disposisi/config"
+	"github.com/fiorelln/disposisi/routes"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-    config.ConnectDB()
 
-    r := gin.Default()
+	err := godotenv.Load()
 
-      r.Use(cors.New(cors.Config{
-        AllowOrigins:     []string{"*"},
-        AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-        AllowHeaders:     []string{"Content-Type", "Authorization"},
-        AllowCredentials: true,
-    }))
+	if err != nil {
+		log.Fatal("Gagal load .env")
+	}
 
-    routes.AuthRoutes(r)
+	config.ConnectDB()
 
-    r.Run(":7000")
+	r := gin.Default()
+
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: []string{
+			"http://127.0.0.1:5500",
+			"http://localhost:5500",
+		},
+		AllowMethods: []string{
+			"GET",
+			"POST",
+			"PUT",
+			"DELETE",
+			"OPTIONS",
+		},
+		AllowHeaders: []string{
+			"Content-Type",
+			"Authorization",
+		},
+		AllowCredentials: true,
+	}))
+
+	routes.SetupRoutes(r)
+
+	r.Run(":7000")
 }
-
-
-
-
-

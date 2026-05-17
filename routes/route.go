@@ -11,6 +11,7 @@ func SetupRoutes(r *gin.Engine) {
 }
 
 func AuthRoutes(r *gin.Engine) {
+
 	auth := r.Group("/auth")
 
 	auth.POST("/login", controllers.Login)
@@ -20,6 +21,7 @@ func AuthRoutes(r *gin.Engine) {
 }
 
 func AdminRoutes(r *gin.Engine) {
+
 	admin := r.Group("/admin")
 
 	admin.POST("/users", controllers.Register)
