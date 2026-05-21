@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CreateDisposisi membuat disposisi untuk surat masuk
 func CreateDisposisi(c *gin.Context) {
 
 	userID, _ := c.Get("user_id")
@@ -25,7 +24,6 @@ func CreateDisposisi(c *gin.Context) {
 		return
 	}
 
-	// Verifikasi surat ada
 	var surat models.Surat
 	if err := config.DB.First(&surat, input.SuratID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Surat tidak ditemukan"})
@@ -46,7 +44,6 @@ func CreateDisposisi(c *gin.Context) {
 		return
 	}
 
-	// Update status surat
 	config.DB.Model(&surat).Update("status", "diteruskan")
 
 	c.JSON(http.StatusOK, gin.H{
@@ -55,7 +52,6 @@ func CreateDisposisi(c *gin.Context) {
 	})
 }
 
-// ApproveDisposisi untuk kepala sekolah approve/reject surat
 func ApproveDisposisi(c *gin.Context) {
 
 	userID, _ := c.Get("user_id")
@@ -105,7 +101,6 @@ func ApproveDisposisi(c *gin.Context) {
 	})
 }
 
-// GetDisposisi untuk melihat disposisi surat
 func GetDisposisi(c *gin.Context) {
 
 	suratID := c.Param("surat_id")
@@ -128,7 +123,6 @@ func GetDisposisi(c *gin.Context) {
 	})
 }
 
-// ListDisposisi untuk listing disposisi surat
 func ListDisposisi(c *gin.Context) {
 
 	userID, _ := c.Get("user_id")
@@ -140,12 +134,10 @@ func ListDisposisi(c *gin.Context) {
 		Preload("TujuanUser").
 		Preload("Verifikator")
 
-	// Filter berdasarkan tujuan atau verifikator
 	if status != "" {
 		query = query.Where("status = ?", status)
 	}
 
-	// Tampilkan yang dituju ke user atau di-verify oleh user
 	query = query.Where("tujuan_id = ? OR verifikator_id = ?", uint(userID.(float64)), uint(userID.(float64)))
 
 	if err := query.Find(&disposisi).Error; err != nil {

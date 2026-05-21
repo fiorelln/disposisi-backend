@@ -7,10 +7,10 @@ import (
 type Surat struct {
 	ID        uint       `gorm:"primaryKey" json:"id"`
 	FileSurat string     `json:"file_surat"`
-	Status    string     `json:"status"` // dikirim, diteruskan, disetujui, ditolak, selesai
-	TujuanID  uint       `json:"tujuan_id"` // user ID yang dituju
-	PengirimID uint      `json:"pengirim_id"` // user ID pengirim
-	Kategori  string     `json:"kategori"` // kategori surat
+	Status    string     `json:"status"` 
+	TujuanID  uint       `json:"tujuan_id"` 
+	PengirimID uint      `json:"pengirim_id"` 
+	Kategori  string     `json:"kategori"` 
 	Judul     string     `json:"judul"`
 	Deskripsi string     `json:"deskripsi"`
 	CreatedAt time.Time  `json:"created_at"`

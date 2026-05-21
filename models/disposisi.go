@@ -6,11 +6,11 @@ type Disposisi struct {
 	ID            uint      `gorm:"primaryKey" json:"id"`
 	SuratID       uint      `json:"surat_id"`
 	TujuanID      uint      `json:"tujuan_id"`
-	VerifikatorID uint      `json:"verifikator_id"` // Kepala Sekolah yang approve
-	Tujuan        string    `json:"tujuan"` // Nama/deskripsi tujuan
-	Catatan       string    `json:"catatan"` // Catatan disposisi
-	Status        string    `json:"status"` // menunggu, disetujui, ditolak, selesai
-	VerifikasiStatus string `json:"verifikasi_status"` // menunggu, setuju, tolak
+	VerifikatorID uint      `json:"verifikator_id"` 
+	Tujuan        string    `json:"tujuan"`
+	Catatan       string    `json:"catatan"` 
+	Status        string    `json:"status"` 
+	VerifikasiStatus string `json:"verifikasi_status"` 
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 
