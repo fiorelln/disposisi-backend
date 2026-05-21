@@ -9,9 +9,8 @@ import (
 )
 
 func CreateDisposisi(c *gin.Context) {
-
 	userID, _ := c.Get("user_id")
-
+	_ = userID
 	var input struct {
 		SuratID   uint   `json:"surat_id" binding:"required"`
 		TujuanID  uint   `json:"tujuan_id" binding:"required"`
