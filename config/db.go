@@ -6,8 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/fiorelln/disposisi/models"
+	"github.com/joho/godotenv"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -22,6 +23,7 @@ func ConnectDB() {
 	if secret == "" {
 		log.Fatal("JWT_SECRET is not set")
 	}
+
 	JwtKey = []byte(secret)
 
 	host := os.Getenv("DB_HOST")
@@ -32,31 +34,29 @@ func ConnectDB() {
 
 	sslmode := os.Getenv("DB_SSLMODE")
 	if sslmode == "" {
-		sslmode = "disable" 
+		sslmode = "disable"
 	}
 
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
-		host, user, password, dbname, port, sslmode,
+		host,
+		user,
+		password,
+		dbname,
+		port,
+		sslmode,
 	)
 
 	var err error
+
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+
 	if err != nil {
 		log.Fatal("Gagal terhubung ke database:", err)
 	}
 
-	if err := DB.AutoMigrate(
-		&models.User{},
-		&models.Jabatan{},
-		&models.UserJabatan{},
-		&models.OTP{},
-		&models.Surat{},
-		&models.Disposisi{},
-	); err != nil {
-		log.Fatal("AutoMigrate gagal:", err)
-	}
 	sqlDB, err := DB.DB()
+
 	if err != nil {
 		log.Fatal("Gagal ambil sql.DB:", err)
 	}
@@ -66,4 +66,15 @@ func ConnectDB() {
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	log.Println("Database berhasil terhubung")
+
+	_ = models.User{}
+	_ = models.Jabatan{}
+	_ = models.UserJabatan{}
+	_ = models.OTP{}
+	_ = models.SuratMasuk{}
+	_ = models.SuratKeluar{}
+	_ = models.Disposisi{}
+	_ = models.DistribusiSK{}
+	_ = models.Notifikasi{}
+	_ = models.Log{}
 }

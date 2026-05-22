@@ -14,95 +14,86 @@ import (
 
 func UploadSurat(c *gin.Context) {
 
-	userID, _ := c.Get("user_id")
-
 	file, err := c.FormFile("file")
+
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "File wajib diupload"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "file wajib diupload",
+		})
 		return
 	}
 
-	// Validasi tipe file
 	if filepath.Ext(file.Filename) != ".pdf" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "File harus PDF"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "file harus pdf",
+		})
 		return
 	}
 
-	// Validasi ukuran file (max 5MB)
-	if file.Size > 5*1024*1024 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Ukuran file maksimal 5MB"})
-		return
-	}
-
-	// Validasi MIME type
-	if file.Header.Get("Content-Type") != "application/pdf" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "MIME type harus PDF"})
-		return
-	}
-
-	// Ambil input form
 	var input struct {
-		Kategori  string `form:"kategori" binding:"required"`
-		Judul     string `form:"judul" binding:"required"`
-		Deskripsi string `form:"deskripsi"`
-		TujuanID  uint   `form:"tujuan_id" binding:"required"`
+		NoSurat      string `form:"no_surat"`
+		PerihalSurat string `form:"perihal_surat"`
+		AsalSurat    string `form:"asal_surat"`
 	}
 
 	if err := c.ShouldBind(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
 		return
 	}
 
 	uploadPath := "uploads/surat"
-	if err := os.MkdirAll(uploadPath, os.ModePerm); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membuat folder upload"})
-		return
-	}
 
-	// Sanitasi nama file
-	filename := fmt.Sprintf("%d_%s", time.Now().Unix(), filepath.Base(file.Filename))
+	os.MkdirAll(uploadPath, os.ModePerm)
+
+	filename := fmt.Sprintf("%d_%s", time.Now().Unix(), file.Filename)
+
 	path := filepath.Join(uploadPath, filename)
 
 	if err := c.SaveUploadedFile(file, path); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal upload file"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "gagal upload file",
+		})
 		return
 	}
 
-	surat := models.Surat{
-		FileSurat: path,
-		Status:    "dikirim",
-		PengirimID: uint(userID.(float64)),
-		TujuanID:   input.TujuanID,
-		Kategori:   input.Kategori,
-		Judul:      input.Judul,
-		Deskripsi:  input.Deskripsi,
+	now := time.Now()
+
+	surat := models.SuratMasuk{
+		NoSurat:         input.NoSurat,
+		PerihalSurat:    input.PerihalSurat,
+		AsalSurat:       input.AsalSurat,
+		FilePDF:         path,
+		TanggalDiterima: &now,
+		StatusAlur:      "masuk",
+		CreatedAt:       now,
+		UpdatedAt:       now,
 	}
 
 	if err := config.DB.Create(&surat).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB insert gagal"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "gagal simpan database",
+		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Upload surat berhasil",
-		"surat": surat,
+		"message": "upload surat berhasil",
+		"data": surat,
 	})
 }
 
-// GetSurat untuk melihat detail surat
 func GetSurat(c *gin.Context) {
 
-	suratID := c.Param("surat_id")
+	id := c.Param("surat_id")
 
-	var surat models.Surat
+	var surat models.SuratMasuk
 
-	if err := config.DB.
-		Preload("Pengirim").
-		Preload("Tujuan").
-		Preload("Disposisi").
-		First(&surat, suratID).Error; err != nil {
-
-		c.JSON(http.StatusNotFound, gin.H{"error": "Surat tidak ditemukan"})
+	if err := config.DB.First(&surat, "id_surat_masuk = ?", id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "surat tidak ditemukan",
+		})
 		return
 	}
 
@@ -111,35 +102,18 @@ func GetSurat(c *gin.Context) {
 	})
 }
 
-// ListSurat untuk melihat daftar surat
 func ListSurat(c *gin.Context) {
 
-	userID, _ := c.Get("user_id")
-	kategori := c.Query("kategori")
-	status := c.Query("status")
+	var surat []models.SuratMasuk
 
-	var surats []models.Surat
-
-	query := config.DB.
-		Preload("Pengirim").
-		Preload("Tujuan").
-		Preload("Disposisi").
-		Where("tujuan_id = ? OR pengirim_id = ?", uint(userID.(float64)), uint(userID.(float64)))
-
-	if kategori != "" {
-		query = query.Where("kategori = ?", kategori)
-	}
-
-	if status != "" {
-		query = query.Where("status = ?", status)
-	}
-
-	if err := query.Order("created_at DESC").Find(&surats).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data"})
+	if err := config.DB.Order("id_surat_masuk DESC").Find(&surat).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "gagal mengambil surat",
+		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data": surats,
+		"data": surat,
 	})
 }

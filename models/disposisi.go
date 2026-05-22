@@ -3,18 +3,25 @@ package models
 import "time"
 
 type Disposisi struct {
-	ID                 uint      `gorm:"primaryKey" json:"id"`
-	SuratID            uint      `json:"surat_id"`
-	TujuanID           uint      `json:"tujuan_id"`
-	VerifikatorID      uint      `json:"verifikator_id"`
-	Tujuan             string    `json:"tujuan"`
-	Catatan            string    `json:"catatan"`
-	Status             string    `json:"status"`
-	VerifikasiStatus   string    `json:"verifikasi_status"`
-	CreatedAt          time.Time `json:"created_at"`
-	UpdatedAt          time.Time `json:"updated_at"`
+	IDDisposisi          uint       `gorm:"column:id_disposisi;primaryKey"`
+	Sifat                string     `gorm:"column:sifat"`
+	Catatan              string     `gorm:"column:catatan"`
+	TanggapanSaran       string     `gorm:"column:tanggapan_saran"`
+	ProsesLanjut         string     `gorm:"column:proses_lanjut"`
+	KoordinasiKonfirmasi string     `gorm:"column:koordinasi_konfirmasi"`
+	IDSuratMasuk         uint       `gorm:"column:id_surat_masuk"`
+	IDKepsek             uint       `gorm:"column:id_kepsek"`
+	IDPenerima           uint       `gorm:"column:id_penerima"`
+	TanggalDisposisi     *time.Time `gorm:"column:tanggal_disposisi"`
+	StatusDisposisi      string     `gorm:"column:status_disposisi"`
+	StatusApproval       string     `gorm:"column:status_approval"`
+	ApprovalAt           *time.Time `gorm:"column:approval_at"`
 
-	Surat              *Surat    `gorm:"foreignKey:SuratID" json:"surat"`
-	TujuanUser         User      `gorm:"foreignKey:TujuanID" json:"tujuan_user"`
-	Verifikator        User      `gorm:"foreignKey:VerifikatorID" json:"verifikator"`
+	SuratMasuk User `gorm:"foreignKey:IDSuratMasuk"`
+	Penerima   User `gorm:"foreignKey:IDPenerima"`
+	Kepsek     User `gorm:"foreignKey:IDKepsek"`
+}
+
+func (Disposisi) TableName() string {
+	return "disposisi"
 }
