@@ -19,15 +19,11 @@ import (
 )
 
 func ValidatePassword(password string) bool {
-
 	hasUpper := regexp.MustCompile(`[A-Z]`).MatchString(password)
 	hasLower := regexp.MustCompile(`[a-z]`).MatchString(password)
 	hasNumber := regexp.MustCompile(`[0-9]`).MatchString(password)
 
-	return len(password) >= 8 &&
-		hasUpper &&
-		hasLower &&
-		hasNumber
+	return len(password) >= 8 && hasUpper && hasLower && hasNumber
 }
 
 func ValidateEmail(email string) bool {
@@ -41,7 +37,6 @@ func ValidateEmail(email string) bool {
 }
 
 func Register(c *gin.Context) {
-
 	var input struct {
 		Name     string `json:"name"`
 		Email    string `json:"email"`
@@ -50,375 +45,235 @@ func Register(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(400, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
-
-	if strings.TrimSpace(input.Name) == "" {
-		c.JSON(400, gin.H{
-			"error": "Nama user wajib diisi",
-		})
+		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 
 	if !ValidateEmail(input.Email) {
-		c.JSON(400, gin.H{
-			"error": "Format email tidak valid",
-		})
-		return
-	}
-
-	if len(input.Jabatans) == 0 {
-		c.JSON(400, gin.H{
-			"error": "Jabatan wajib dipilih",
-		})
+		c.JSON(400, gin.H{"error": "email invalid"})
 		return
 	}
 
 	if !ValidatePassword(input.Password) {
-		c.JSON(400, gin.H{
-			"error": "Password minimal 8 karakter, huruf besar, kecil, dan angka",
-		})
+		c.JSON(400, gin.H{"error": "password lemah"})
 		return
 	}
 
-	hashedPassword, err := helpers.HashPassword(input.Password)
-
-	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Gagal hash password",
-		})
-		return
-	}
+	hash, _ := helpers.HashPassword(input.Password)
 
 	user := models.User{
 		Name:     input.Name,
 		Email:    input.Email,
-		Password: hashedPassword,
+		Password: hash,
 	}
 
 	if err := config.DB.Create(&user).Error; err != nil {
-		c.JSON(400, gin.H{
-			"error": "Email sudah digunakan",
-		})
+		c.JSON(400, gin.H{"error": "email sudah digunakan"})
 		return
 	}
 
-	for index, jabatanID := range input.Jabatans {
-
-		userJabatan := models.UserJabatan{
+	for i, j := range input.Jabatans {
+		config.DB.Create(&models.UserJabatan{
 			UserID:    user.ID,
-			JabatanID: jabatanID,
-			IsPrimary: index == 0,
-		}
-
-		config.DB.Create(&userJabatan)
+			JabatanID: j,
+			IsPrimary: i == 0,
+		})
 	}
 
-	c.JSON(200, gin.H{
-		"message": "User berhasil dibuat",
-	})
+	c.JSON(200, gin.H{"message": "user created"})
 }
 
 func Login(c *gin.Context) {
-
 	var input struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(400, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
-
-	if !ValidateEmail(input.Email) {
-		c.JSON(400, gin.H{"error": "Format email tidak valid"})
+		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 
 	var user models.User
-
-	if err := config.DB.
-		Preload("Jabatans.Jabatan").
-		Where("email = ?", input.Email).
-		First(&user).Error; err != nil {
-
-		c.JSON(401, gin.H{
-			"error": "Email atau password salah",
-		})
+	if err := config.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
+		c.JSON(401, gin.H{"error": "login gagal"})
 		return
 	}
 
 	if !helpers.CheckPassword(user.Password, input.Password) {
-		c.JSON(401, gin.H{
-			"error": "Email atau password salah",
-		})
+		c.JSON(401, gin.H{"error": "login gagal"})
 		return
 	}
 
-	var roles []string
+	token, _ := helpers.GenerateToken(user.ID, []string{})
 
-	for _, jabatan := range user.Jabatans {
-		roles = append(roles, jabatan.Jabatan.NamaJabatan)
-	}
+	c.JSON(200, gin.H{"token": token})
+}
 
-	token, err := helpers.GenerateToken(user.ID, roles)
-
-	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Gagal generate token",
-		})
-		return
-	}
-
-	c.JSON(200, gin.H{
-		"token": token,
-		"user": gin.H{
-			"id":       user.ID,
-			"name":     user.Name,
-			"email":    user.Email,
-			"jabatans": roles,
-		},
-	})
+func generateOTP() string {
+	return fmt.Sprintf("%06d", rand.Intn(1000000))
 }
 
 func ForgotPassword(c *gin.Context) {
-
 	var input struct {
 		Email string `json:"email"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(400, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
-
-	if !ValidateEmail(input.Email) {
-		c.JSON(400, gin.H{"error": "Format email tidak valid"})
+		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 
 	var user models.User
-
-	if err := config.DB.
-		Where("email = ?", input.Email).
-		First(&user).Error; err != nil {
-
-		c.JSON(404, gin.H{
-			"error": "Email tidak ditemukan",
-		})
+	if err := config.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
+		c.JSON(404, gin.H{"error": "user tidak ditemukan"})
 		return
 	}
 
-	var total int64
+	var count int64
+	config.DB.Model(&models.OTP{}).
+		Where("id_user = ? AND created_at > ?", user.ID, time.Now().Add(-25*time.Minute)).
+		Count(&count)
 
-	config.DB.
-	Model(&models.OTP{}).
-	Where("user_id = ? AND created_at > ?", user.ID, time.Now().Add(-25*time.Minute)).
-	Count(&total)
-
-	if total >= 5 {
-		c.JSON(429, gin.H{
-			"error": "Limit OTP tercapai",
-		})
+	if count >= 5 {
+		c.JSON(429, gin.H{"error": "limit OTP 5x / 25 menit"})
 		return
 	}
 
-	rand.Seed(time.Now().UnixNano())
+	var last models.OTP
+	err := config.DB.Where("id_user = ?", user.ID).
+		Order("created_at desc").
+		First(&last).Error
 
-	otpCode := fmt.Sprintf("%06d", rand.Intn(1000000))
+	if err == nil {
+		if time.Since(last.CreatedAt) < 60*time.Second {
+			c.JSON(429, gin.H{"error": "tunggu 60 detik"})
+			return
+		}
+	}
 
-	otp := models.OTP{
-		UserID:    user.ID,
-		KodeOTP:   otpCode,
+	config.DB.Model(&models.OTP{}).
+		Where("id_user = ? AND is_used = false", user.ID).
+		Update("is_used", true)
+
+	code := generateOTP()
+
+	otp := models.OTP{UserID: user.ID,
+		KodeOTP:   code,
 		ExpiresAt: time.Now().Add(2 * time.Minute),
 		IsUsed:    false,
 	}
 
-	if err := config.DB.Create(&otp).Error; err != nil {
-		c.JSON(500, gin.H{
-			"error": "Gagal menyimpan OTP",
-		})
-		return
-	}
+	config.DB.Create(&otp)
 
 	payload := map[string]interface{}{
-		"from": os.Getenv("RESEND_EMAIL"),
-		"to": []string{
-			user.Email,
-		},
-		"subject": "Reset Password OTP",
-		"html": "<h1>Kode OTP Kamu: " + otpCode + "</h1>",
+		"from":    os.Getenv("RESEND_EMAIL"),
+		"to":      []string{user.Email},
+		"subject": "OTP Reset Password",
+		"html":    "<h2>Kode OTP: " + code + "</h2>",
 	}
 
-	jsonPayload, _ := json.Marshal(payload)
+	body, _ := json.Marshal(payload)
 
 	req, _ := http.NewRequest(
 		"POST",
 		"https://api.resend.com/emails",
-		bytes.NewBuffer(jsonPayload),
+		bytes.NewBuffer(body),
 	)
 
 	req.Header.Set("Authorization", "Bearer "+os.Getenv("RESEND_API_KEY"))
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
-
 	resp, err := client.Do(req)
 
-	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Gagal mengirim OTP",
-		})
+	if err != nil || resp.StatusCode >= 300 {
+		c.JSON(500, gin.H{"error": "gagal kirim otp"})
 		return
 	}
 
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 300 {
-		c.JSON(500, gin.H{
-			"error": "Gagal mengirim OTP",
-		})
-		return
-	}
-
-	c.JSON(200, gin.H{
-		"message": "OTP berhasil dikirim",
-	})
+	c.JSON(200, gin.H{"message": "otp terkirim"})
 }
 
 func VerifyOTP(c *gin.Context) {
-
 	var input struct {
 		Email string `json:"email"`
 		OTP   string `json:"otp"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(400, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
-
-	if !ValidateEmail(input.Email) {
-		c.JSON(400, gin.H{"error": "Format email tidak valid"})
+		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 
 	var user models.User
-
-	if err := config.DB.
-		Where("email = ?", input.Email).
-		First(&user).Error; err != nil {
-
-		c.JSON(404, gin.H{
-			"error": "Email tidak ditemukan",
-		})
+	if err := config.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
+		c.JSON(404, gin.H{"error": "user tidak ditemukan"})
 		return
 	}
 
 	var otp models.OTP
-
 	if err := config.DB.
-		Where("user_id = ? AND kode_otp = ? AND is_used = ?", user.ID, input.OTP, false).
-		Last(&otp).Error; err != nil {
+		Where("id_user = ? AND kode_otp = ? AND is_used = false", user.ID, input.OTP).
+		Order("created_at desc").
+		First(&otp).Error; err != nil {
 
-		c.JSON(400, gin.H{
-			"error": "OTP salah",
-		})
+		c.JSON(400, gin.H{"error": "otp salah"})
 		return
 	}
 
 	if time.Now().After(otp.ExpiresAt) {
-
-		c.JSON(400, gin.H{
-			"error": "OTP expired",
-		})
+		c.JSON(400, gin.H{"error": "otp expired"})
 		return
 	}
 
 	otp.IsUsed = true
-
 	config.DB.Save(&otp)
 
-	c.JSON(200, gin.H{
-		"message": "OTP valid",
-	})
+	c.JSON(200, gin.H{"message": "otp valid"})
 }
 
 func ResetPassword(c *gin.Context) {
-
 	var input struct {
 		Email       string `json:"email"`
 		NewPassword string `json:"new_password"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(400, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
-
-	if !ValidateEmail(input.Email) {
-		c.JSON(400, gin.H{"error": "Format email tidak valid"})
+		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 
 	if !ValidatePassword(input.NewPassword) {
-		c.JSON(400, gin.H{
-			"error": "Password minimal 8 karakter, huruf besar, kecil, dan angka",
-		})
+		c.JSON(400, gin.H{"error": "password lemah"})
 		return
 	}
 
 	var user models.User
+	if err := config.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
+		c.JSON(404, gin.H{"error": "user tidak ditemukan"})
+		return
+	}
 
+	var otp models.OTP
 	if err := config.DB.
-		Where("email = ?", input.Email).
-		First(&user).Error; err != nil {
+		Where("id_user = ? AND is_used = true", user.ID).
+		Order("created_at desc").
+		First(&otp).Error; err != nil {
 
-		c.JSON(404, gin.H{
-			"error": "Email tidak ditemukan",
-		})
+		c.JSON(400, gin.H{"error": "otp belum diverifikasi"})
 		return
 	}
 
-	// Verifikasi bahwa ada OTP yang sudah diverifikasi dalam 5 menit terakhir
-	var verifiedOTP models.OTP
-
-	if err := config.DB.
-		Where("user_id = ? AND is_used = ? AND created_at > ?", user.ID, true, time.Now().Add(-5*time.Minute)).
-		Last(&verifiedOTP).Error; err != nil {
-
-		c.JSON(400, gin.H{
-			"error": "OTP belum diverifikasi atau sudah expired",
-		})
+	if time.Since(otp.CreatedAt) > 5*time.Minute {
+		c.JSON(400, gin.H{"error": "session expired"})
 		return
 	}
 
-	hashedPassword, err := helpers.HashPassword(input.NewPassword)
+	hash, _ := helpers.HashPassword(input.NewPassword)
 
-	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Gagal hash password",
-		})
-		return
-	}
-
-	user.Password = hashedPassword
-
+	user.Password = hash
 	config.DB.Save(&user)
 
-	c.JSON(200, gin.H{
-		"message": "Password berhasil direset",
-	})
+	c.JSON(200, gin.H{"message": "password berhasil direset"})
 }

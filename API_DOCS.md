@@ -11,7 +11,7 @@ Base URL: `http://localhost:7000`
 
 ## 1. Autentikasi dan User Management
 
-### 1.1 POST /auth/login ✅
+### 1.1 POST /auth/login 
 - Deskripsi: Login user dengan email dan password.
 - Autentikasi: Tidak
 
@@ -41,7 +41,7 @@ Response error:
 - 401: `Email atau password salah`
 - 500: failure on token generation
 
-### 1.2 POST /admin/users ✅
+### 1.2 POST /admin/users 
 - Deskripsi: Registrasi user baru (admin only).
 - Autentikasi: **Bearer token required**
 
@@ -66,7 +66,7 @@ Response sukses (200):
 
 ## 2. Forgot Password dan OTP
 
-### 2.1 POST /auth/forgot-password ✅
+### 2.1 POST /auth/forgot-password 
 - Deskripsi: Minta OTP untuk reset password.
 - Autentikasi: Tidak
 
@@ -77,7 +77,7 @@ Response sukses (200):
 }
 ```
 
-### 2.2 POST /auth/verify-otp ✅
+### 2.2 POST /auth/verify-otp 
 - Deskripsi: Verifikasi OTP yang dikirim ke email.
 - Autentikasi: Tidak
 
@@ -96,7 +96,7 @@ Response sukses (200):
 }
 ```
 
-### 2.3 POST /auth/reset-password ✅
+### 2.3 POST /auth/reset-password 
 - Deskripsi: Reset password user dengan OTP verification.
 - Autentikasi: Tidak, tetapi OTP harus sudah diverifikasi
 
@@ -123,7 +123,7 @@ Response sukses (200):
 
 ## 3. Manajemen Surat
 
-### 3.1 POST /surat/upload ✅
+### 3.1 POST /surat/upload 
 - Deskripsi: Upload file PDF surat.
 - Autentikasi: **Bearer token required**
 
@@ -164,7 +164,7 @@ Response error:
 - Ukuran max 5MB
 - MIME type harus `application/pdf`
 
-### 3.2 GET /surat/:surat_id ✅
+### 3.2 GET /surat/:surat_id 
 - Deskripsi: Melihat detail surat.
 - Autentikasi: **Bearer token required**
 
@@ -187,7 +187,7 @@ Response sukses (200):
 }
 ```
 
-### 3.3 GET /surat (Query parameters) ✅
+### 3.3 GET /surat (Query parameters) 
 - Deskripsi: List surat milik user (sebagai pengirim atau tujuan).
 - Autentikasi: **Bearer token required**
 
@@ -209,7 +209,7 @@ Response sukses (200):
 
 ## 4. Disposisi Surat
 
-### 4.1 POST /disposisi ✅
+### 4.1 POST /disposisi 
 - Deskripsi: Membuat disposisi surat (TU ke Kepsek).
 - Autentikasi: **Bearer token required**
 
@@ -241,7 +241,7 @@ Response sukses (200):
 
 **Flow**: Status surat otomatis berubah ke `diteruskan`.
 
-### 4.2 POST /disposisi/approve ✅
+### 4.2 POST /disposisi/approve 
 - Deskripsi: Kepala Sekolah approve/reject surat.
 - Autentikasi: **Bearer token required**
 
@@ -273,7 +273,7 @@ Response sukses (200):
 - Jika `is_approved=true`: status disposisi = `disetujui`, status surat = `disetujui`
 - Jika `is_approved=false`: status disposisi = `ditolak`, status surat = `ditolak`
 
-### 4.3 GET /disposisi/surat/:surat_id ✅
+### 4.3 GET /disposisi/surat/:surat_id 
 - Deskripsi: Melihat disposisi surat tertentu.
 - Autentikasi: **Bearer token required**
 
@@ -292,7 +292,7 @@ Response sukses (200):
 }
 ```
 
-### 4.4 GET /disposisi (Query parameters) ✅
+### 4.4 GET /disposisi (Query parameters) 
 - Deskripsi: List disposisi surat (yang dituju atau di-verify oleh user).
 - Autentikasi: **Bearer token required**
 
