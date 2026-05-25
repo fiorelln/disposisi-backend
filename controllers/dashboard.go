@@ -9,7 +9,9 @@ import (
 func Dashboard(c *gin.Context) {
 
 	userID, _ := c.Get("user_id")
-	uid := uint(userID.(uint))
+	uid := userID.(uint)
+
+	roles, _ := c.Get("roles")
 
 	var totalSuratMasuk int64
 	config.DB.Model(&models.SuratMasuk{}).
@@ -26,9 +28,10 @@ func Dashboard(c *gin.Context) {
 		Count(&pendingDisposisi)
 
 	c.JSON(200, gin.H{
+		"roles": roles,
 		"summary": gin.H{
 			"total_surat_masuk": totalSuratMasuk,
-			"total_disposisi": totalDisposisi,
+			"total_disposisi":   totalDisposisi,
 			"pending_disposisi": pendingDisposisi,
 		},
 	})

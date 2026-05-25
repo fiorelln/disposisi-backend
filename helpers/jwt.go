@@ -8,15 +8,15 @@ import (
 )
 
 func GenerateToken(userID uint, roles []string) (string, error) {
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+	claims := jwt.MapClaims{
 		"user_id": userID,
 		"roles":   roles,
 		"exp":     time.Now().Add(72 * time.Hour).Unix(),
-	})
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	tokenString, err := token.SignedString(config.JwtKey)
-
 	if err != nil {
 		return "", err
 	}
