@@ -30,14 +30,13 @@ func CreateDisposisi(c *gin.Context) {
 	now := time.Now()
 
 	disposisi := models.Disposisi{
-		Sifat:            input.Sifat,
-		Catatan:          input.Catatan,
-		IDSuratMasuk:     input.IDSuratMasuk,
-		IDPenerima:       input.IDPenerima,
-		IDKepsek:         userID.(uint),
-		TanggalDisposisi: &now,
-		StatusDisposisi:  "pending",
-		StatusApproval:   "menunggu",
+		Sifat:        input.Sifat,
+		Catatan:      input.Catatan,
+		SuratMasukID: input.IDSuratMasuk,
+		ToUserID:     input.IDPenerima,
+		FromUserID:   userID.(uint),
+		Status:       models.StatusPending,
+		CreatedAt:    now,
 	}
 
 	if err := config.DB.Create(&disposisi).Error; err != nil {
@@ -110,8 +109,10 @@ func ApproveDisposisi(c *gin.Context) {
 
 	now := time.Now()
 
-	disposisi.StatusApproval = input.Status
-	disposisi.ApprovalAt = &now
+	disposisi.Status = input.Status
+	if input.Status == "completed" {
+		disposisi.CompleteAt = &now
+	}
 
 	config.DB.Save(&disposisi)
 
