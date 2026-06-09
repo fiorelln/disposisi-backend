@@ -114,6 +114,26 @@ Aplikasi akan berjalan di `http://localhost:7000`.
 - Email harus valid pada registrasi, login, OTP, dan reset password.
 - Gunakan token `Authorization: Bearer <token>` pada endpoint yang dilindungi.
 
+## Deploy ke Railway (Auto-deploy dari GitHub)
+
+1. Push repo ke GitHub
+2. Di Railway: **New Project → Deploy from GitHub repo** → pilih repo ini
+3. Di dashboard Railway, isi **Variables** (wajib):
+
+```
+DB_HOST=<host-postgresql>
+DB_PORT=5432
+DB_USER=<user>
+DB_PASSWORD=<password>
+DB_NAME=<nama-database>
+DB_SSLMODE=require
+JWT_SECRET=<ganti-pake-string-acak>
+RESEND_API_KEY=<api-key-resend>
+RESEND_EMAIL=<email-pengirim>
+```
+
+4. Railway otomatis build & jalan. **Setiap push ke GitHub auto-update**.
+
 ## Hosting Production
 
 1. **VPS / Server**: Deploy binary ke VPS (DigitalOcean, AWS EC2, dll)

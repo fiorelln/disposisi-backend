@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 	"strings"
 
@@ -17,10 +16,7 @@ import (
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Gagal load .env")
-	}
+	godotenv.Load()
 
 	config.ConnectDB()
 	db := config.DB
