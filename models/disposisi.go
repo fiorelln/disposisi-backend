@@ -19,10 +19,10 @@ type Disposisi struct {
 	IsiDisposisi         string     `gorm:"column:isi_disposisi;type:text;default:''" json:"isi_disposisi"`
 	BatasWaktu           string     `gorm:"column:batas_waktu;default:''" json:"batas_waktu"`
 
-	SuratMasuk       *SuratMasuk `gorm:"foreignKey:SuratMasukID;references:IDSuratMasuk" json:"surat_masuk,omitempty"`
-	Kepsek           *User       `gorm:"foreignKey:KepsekID;references:ID" json:"kepsek,omitempty"`
-	Penerima         *User       `gorm:"foreignKey:PenerimaID;references:ID" json:"penerima,omitempty"`
-	JabatanPenerima  *Jabatan    `gorm:"foreignKey:JabatanPenerimaID;references:ID" json:"jabatan_penerima,omitempty"`
+	SuratMasuk      *SuratMasuk `gorm:"foreignKey:SuratMasukID;references:IDSuratMasuk" json:"surat_masuk,omitempty"`
+	Kepsek          *User       `gorm:"foreignKey:KepsekID;references:ID" json:"kepsek,omitempty"`
+	Penerima        *User       `gorm:"foreignKey:PenerimaID;references:ID" json:"penerima,omitempty"`
+	JabatanPenerima *Jabatan    `gorm:"foreignKey:JabatanPenerimaID;references:ID" json:"jabatan_penerima,omitempty"`
 }
 
 func (Disposisi) TableName() string {

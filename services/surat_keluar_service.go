@@ -13,6 +13,7 @@ type SuratKeluarService interface {
 	Create(noSurat, perihal, catatan, tujuan string, filePDF string) (*models.SuratKeluar, error)
 	SubmitToPrincipal(suratID uint) error
 	Review(suratID uint, principalID uint, status string, notes string) error
+	Finalize(suratID uint, tuUserID uint) error
 	GetByID(id uint) (*models.SuratKeluar, error)
 	List(page, pageSize int, status string) ([]models.SuratKeluar, int64, error)
 }
@@ -80,7 +81,20 @@ func (s *suratKeluarService) Review(suratID uint, principalID uint, status strin
 	}
 
 	if status == "disetujui" {
-		return s.suratRepo.UpdateStatusAlur(suratID, "selesai")
+		return s.suratRepo.UpdateStatusAlur(suratID, "disetujui_kembali_ke_tu")
+	}
+
+	return s.suratRepo.UpdateStatusAlur(suratID, "selesai")
+}
+
+func (s *suratKeluarService) Finalize(suratID uint, tuUserID uint) error {
+	surat, err := s.suratRepo.GetByID(suratID)
+	if err != nil {
+		return err
+	}
+
+	if surat.StatusAlur != "disetujui_kembali_ke_tu" {
+		return errors.New("surat harus disetujui Kepala Sekolah terlebih dahulu")
 	}
 
 	return s.suratRepo.UpdateStatusAlur(suratID, "selesai")

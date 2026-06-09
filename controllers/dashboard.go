@@ -33,11 +33,11 @@ func Dashboard(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"roles": roles,
 		"summary": gin.H{
-			"total_surat_masuk":          totalSuratMasuk,
-			"total_surat_keluar":         totalSuratKeluar,
-			"total_disposisi":            totalDisposisi,
-			"pending_disposisi":          pendingDisposisi,
-			"surat_masuk_menunggu":       totalSuratMasukMenunggu,
+			"total_surat_masuk":    totalSuratMasuk,
+			"total_surat_keluar":   totalSuratKeluar,
+			"total_disposisi":      totalDisposisi,
+			"pending_disposisi":    pendingDisposisi,
+			"surat_masuk_menunggu": totalSuratMasukMenunggu,
 		},
 	})
 }

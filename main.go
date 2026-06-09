@@ -23,18 +23,15 @@ func main() {
 	config.ConnectDB()
 	db := config.DB
 
-	// REPOSITORIES
 	disposisiRepo := repositories.NewDisposisiRepository(db)
 	suratMasukRepo := repositories.NewSuratMasukRepository(db)
 	suratKeluarRepo := repositories.NewSuratKeluarRepository(db)
 
-	// SERVICES
 	notificationSvc := services.NewNotificationService(db)
 	suratKeluarSvc := services.NewSuratKeluarService(suratKeluarRepo, db)
-	suratMasukSvc := services.NewSuratMasukService(suratMasukRepo, disposisiRepo, db)
+	suratMasukSvc := services.NewSuratMasukService(suratMasukRepo, disposisiRepo, notificationSvc, db)
 	disposisiSvc := services.NewDisposisiService(disposisiRepo, suratMasukRepo, notificationSvc, db)
 
-	// CONTROLLERS
 	routes.SuratMasukCtrl = controllers.NewSuratMasukController(suratMasukSvc, disposisiSvc)
 	routes.SuratKeluarCtrl = controllers.NewSuratKeluarController(suratKeluarSvc)
 	routes.DisposisiCtrl = controllers.NewDisposisiController(disposisiSvc)

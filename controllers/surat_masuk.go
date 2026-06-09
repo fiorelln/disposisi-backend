@@ -121,9 +121,9 @@ func (ctrl *SuratMasukController) DistributeToUser(c *gin.Context) {
 	userID := c.MustGet("user_id").(uint)
 
 	var input struct {
-		PenerimaID       uint   `json:"penerima_id"`
+		PenerimaID        uint   `json:"penerima_id"`
 		JabatanPenerimaID uint   `json:"jabatan_penerima_id"`
-		Catatan          string `json:"catatan"`
+		Catatan           string `json:"catatan"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {

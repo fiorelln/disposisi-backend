@@ -173,12 +173,12 @@ func (s *DisposisiServiceImpl) WakaAction(
 	tx := s.db.Begin()
 
 	updates := map[string]interface{}{
-		"status_disposisi":       "sedang_dikerjakan",
-		"isi_disposisi":          isiDisposisi,
-		"batas_waktu":            batasWaktu,
-		"tanggapan_saran":        tanggapanSaran,
-		"proses_lanjut":          prosesLanjut,
-		"koordinasi_konfirmasi":  koordinasiKonfirmasi,
+		"status_disposisi":      "sedang_dikerjakan",
+		"isi_disposisi":         isiDisposisi,
+		"batas_waktu":           batasWaktu,
+		"tanggapan_saran":       tanggapanSaran,
+		"proses_lanjut":         prosesLanjut,
+		"koordinasi_konfirmasi": koordinasiKonfirmasi,
 	}
 
 	if err := tx.Model(&models.Disposisi{}).

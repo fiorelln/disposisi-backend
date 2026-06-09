@@ -123,6 +123,19 @@ func (ctrl *SuratKeluarController) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": surat})
 }
 
+func (ctrl *SuratKeluarController) Finalize(c *gin.Context) {
+	idStr := c.Param("id")
+	id, _ := strconv.ParseUint(idStr, 10, 32)
+	userID := c.MustGet("user_id").(uint)
+
+	if err := ctrl.service.Finalize(uint(id), userID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "surat keluar berhasil diarsipkan"})
+}
+
 func (ctrl *SuratKeluarController) List(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))

@@ -18,37 +18,47 @@ type SuratMasukService interface {
 	List(page, pageSize int, status string) ([]models.SuratMasuk, int64, error)
 }
 
+var wakaJabatan = map[string]bool{
+	"waka kesiswaan": true,
+	"waka kurikulum": true,
+	"waka sarpras":   true,
+	"waka humas":     true,
+}
+
 type suratMasukService struct {
-	suratRepo     repositories.SuratMasukRepository
-	disposisiRepo repositories.DisposisiRepository
-	db            *gorm.DB
+	suratRepo       repositories.SuratMasukRepository
+	disposisiRepo   repositories.DisposisiRepository
+	notificationSvc NotificationService
+	db              *gorm.DB
 }
 
 func NewSuratMasukService(
 	suratRepo repositories.SuratMasukRepository,
 	disposisiRepo repositories.DisposisiRepository,
+	notificationSvc NotificationService,
 	db *gorm.DB,
 ) SuratMasukService {
 	return &suratMasukService{
-		suratRepo:     suratRepo,
-		disposisiRepo: disposisiRepo,
-		db:            db,
+		suratRepo:       suratRepo,
+		disposisiRepo:   disposisiRepo,
+		notificationSvc: notificationSvc,
+		db:              db,
 	}
 }
 
 func (s *suratMasukService) Register(noSurat, perihal, asal string, filePDF string) (*models.SuratMasuk, error) {
 	now := time.Now()
 	surat := &models.SuratMasuk{
-		NoSurat:         noSurat,
-		PerihalSurat:    perihal,
-		AsalSurat:       asal,
-		FilePDF:         filePDF,
-		TanggalSurat:    &now,
-		TanggalDiterima: &now,
+		NoSurat:          noSurat,
+		PerihalSurat:     perihal,
+		AsalSurat:        asal,
+		FilePDF:          filePDF,
+		TanggalSurat:     &now,
+		TanggalDiterima:  &now,
 		StatusVerifikasi: "menunggu",
-		StatusAlur:      "diterima_tu",
-		CreatedAt:       now,
-		UpdatedAt:       now,
+		StatusAlur:       "diterima_tu",
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 	if err := s.suratRepo.Create(surat); err != nil {
 		return nil, err
@@ -116,7 +126,7 @@ func (s *suratMasukService) Review(suratID uint, kepsekID uint, statusApproval s
 		s.db.Model(&disposisi).Updates(updates)
 
 		s.suratRepo.Verify(suratID, kepsekID, "disetujui", catatan)
-		return s.suratRepo.UpdateStatusAlur(suratID, "diteruskan")
+		return s.suratRepo.UpdateStatusAlur(suratID, "disetujui_kembali_ke_tu")
 	}
 
 	updates := map[string]interface{}{
@@ -137,8 +147,22 @@ func (s *suratMasukService) DistributeToUser(suratID uint, tuUserID uint, peneri
 		return nil, err
 	}
 
-	if surat.StatusAlur != "diteruskan" {
-		return nil, errors.New("surat harus disetujui Kepala Sekolah terlebih dahulu")
+	if surat.StatusAlur != "disetujui_kembali_ke_tu" {
+		return nil, errors.New("surat harus disetujui Kepala Sekolah dan dikembalikan ke TU terlebih dahulu")
+	}
+
+	var jabatan models.Jabatan
+	if err := s.db.First(&jabatan, jabatanPenerimaID).Error; err != nil {
+		return nil, errors.New("jabatan penerima tidak ditemukan")
+	}
+
+	if !wakaJabatan[jabatan.NamaJabatan] {
+		return nil, errors.New("TU hanya dapat mendistribusikan surat kepada Waka (waka kesiswaan, waka kurikulum, waka sarpras, waka humas)")
+	}
+
+	var penerima models.User
+	if err := s.db.First(&penerima, penerimaID).Error; err != nil {
+		return nil, errors.New("penerima tidak ditemukan")
 	}
 
 	disposisi := &models.Disposisi{
@@ -152,6 +176,12 @@ func (s *suratMasukService) DistributeToUser(suratID uint, tuUserID uint, peneri
 	if err := s.disposisiRepo.Create(disposisi); err != nil {
 		return nil, err
 	}
+
+	if err := s.suratRepo.UpdateStatusAlur(suratID, "diteruskan"); err != nil {
+		return nil, err
+	}
+
+	go s.notificationSvc.NotifyDisposisiReceived(disposisi.ID, penerimaID)
 
 	return disposisi, nil
 }

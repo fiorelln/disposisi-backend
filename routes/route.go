@@ -49,6 +49,7 @@ func SuratKeluarRoutes(r *gin.Engine) {
 	sk.POST("", middlewares.RoleMiddleware("admin", "Tata Usaha"), SuratKeluarCtrl.Create)
 	sk.POST("/:id/submit-to-principal", middlewares.RoleMiddleware("admin", "Tata Usaha"), SuratKeluarCtrl.SubmitToPrincipal)
 	sk.POST("/:id/review", middlewares.RoleMiddleware("kepala sekolah"), SuratKeluarCtrl.Review)
+	sk.POST("/:id/finalize", middlewares.RoleMiddleware("admin", "Tata Usaha"), SuratKeluarCtrl.Finalize)
 	sk.GET("/:id", SuratKeluarCtrl.GetByID)
 	sk.GET("", SuratKeluarCtrl.List)
 }
@@ -65,7 +66,6 @@ func DisposisiRoutes(r *gin.Engine) {
 	d.POST("/:id/waka-action", middlewares.RoleMiddleware("waka kesiswaan", "waka kurikulum", "waka sarpras", "waka humas", "bk", "kapro rpl", "kapro tkj", "kapro dkv", "kapro an", "kapro ei", "kapro mt", "kapro av", "kapro bc", "bkk", "prakerin"), DisposisiCtrl.WakaAction)
 	d.POST("/:id/complete", DisposisiCtrl.CompleteDisposisi)
 
-	// History of a surat
 	sm := r.Group("/surat")
 	sm.Use(middlewares.AuthMiddleware())
 	sm.GET("/:surat_id/history", DisposisiCtrl.GetHistory)

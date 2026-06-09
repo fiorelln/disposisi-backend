@@ -123,6 +123,28 @@ Response sukses (200):
 
 ## 3. Manajemen Surat
 
+**Alur Surat Masuk**:
+```
+TU register (diterima_tu)
+  → TU forward ke Kepsek (disposisi_kepsek)
+    → Kepsek review:
+        ├── ditolak → selesai (arsip)
+        └── disetujui → kembali ke TU (disetujui_kembali_ke_tu)
+            → TU distribusi ke Waka (diteruskan)
+                → Waka disposisi ke Staff (individual)
+                    → Staff selesai
+```
+
+**Alur Surat Keluar**:
+```
+TU create (diterima_tu)
+  → TU submit ke Kepsek (disposisi_kepsek)
+    → Kepsek review:
+        ├── ditolak → selesai
+        └── disetujui → kembali ke TU (disetujui_kembali_ke_tu)
+            → TU finalize/arsip (selesai)
+```
+
 ### 3.1 POST /surat/upload 
 - Deskripsi: Upload file PDF surat.
 - Autentikasi: **Bearer token required**
@@ -163,6 +185,15 @@ Response error:
 - File extension harus `.pdf`
 - Ukuran max 5MB
 - MIME type harus `application/pdf`
+
+**Alur Surat Masuk**:
+```
+TU register → TU forward ke Kepsek → Kepsek review →
+  ├── ditolak → selesai (arsip)
+  └── disetujui → kembali ke TU (disetujui_kembali_ke_tu) →
+       TU distribusi ke Waka (by jabatan: waka kesiswaan, kurikulum, sarpras, humas) →
+       Waka disposisi ke Staff (individual) → Staff selesai
+```
 
 ### 3.2 GET /surat/:surat_id 
 - Deskripsi: Melihat detail surat.
@@ -241,6 +272,8 @@ Response sukses (200):
 
 **Flow**: Status surat otomatis berubah ke `diteruskan`.
 
+**Validasi**: TU hanya dapat mendistribusikan surat kepada pengguna dengan jabatan Waka (waka kesiswaan, waka kurikulum, waka sarpras, waka humas).
+
 ### 4.2 POST /disposisi/approve 
 - Deskripsi: Kepala Sekolah approve/reject surat.
 - Autentikasi: **Bearer token required**
@@ -311,7 +344,41 @@ Response sukses (200):
 
 ---
 
-## 5. Model Database
+## 5. Surat Keluar
+
+### 5.1 POST /surat-keluar
+- Deskripsi: Membuat draft surat keluar (TU).
+- Autentikasi: **Bearer token required** (role: admin, Tata Usaha)
+
+### 5.2 POST /surat-keluar/:id/submit-to-principal
+- Deskripsi: Mengajukan surat keluar ke Kepala Sekolah.
+- Autentikasi: **Bearer token required** (role: admin, Tata Usaha)
+
+### 5.3 POST /surat-keluar/:id/review
+- Deskripsi: Kepala Sekolah menyetujui/menolak surat keluar.
+- Autentikasi: **Bearer token required** (role: kepala sekolah)
+
+Response sukses (200):
+```json
+{
+  "message": "surat keluar berhasil disetujui"
+}
+```
+
+### 5.4 POST /surat-keluar/:id/finalize
+- Deskripsi: TU finalisasi/arsip surat keluar setelah disetujui Kepala Sekolah.
+- Autentikasi: **Bearer token required** (role: admin, Tata Usaha)
+
+Response sukses (200):
+```json
+{
+  "message": "surat keluar berhasil diarsipkan"
+}
+```
+
+---
+
+## 6. Model Database
 
 Tabel yang ada dan dimigrasikan otomatis:
 - `users` - User login
@@ -323,20 +390,23 @@ Tabel yang ada dan dimigrasikan otomatis:
 
 ---
 
-## 6. Perubahan Penting vs Audit Sebelumnya
+## 7. Perubahan Penting vs Audit Sebelumnya
 
 | Aspek | Sebelum | Sesudah |
-|---|---|---|
+|---|---|---|---|
 | Migrasi Database | Hanya User | Semua model |
 | Reset Password | Tidak aman (tanpa OTP check) | Aman (OTP required) |
 | Upload Surat | Endpoint ada, route kosong | Endpoint aktif & route terdaftar |
 | Disposisi | Belum ada | Lengkap dengan create & approve |
 | Middleware Auth | Ada code, tidak diterapkan | Diterapkan pada /admin, /surat, /disposisi |
 | Validasi File | Hanya ekstensi | Ekstensi + ukuran + MIME type |
+| Alur Surat Masuk | Langsung diteruskan ke Waka/Staff setelah disetujui Kepsek | Kembali ke TU dulu (disetujui_kembali_ke_tu), lalu TU distribusi ke Waka |
+| Distribusi oleh TU | Bisa ke siapa saja (Waka/Staff) | Hanya ke Waka (waka kesiswaan, kurikulum, sarpras, humas) |
+| Alur Surat Keluar | Langsung selesai setelah disetujui Kepsek | Kembali ke TU untuk difinalisasi/diarsipkan |
 
 ---
 
-## 7. Error Handling & Status Code
+## 8. Error Handling & Status Code
 
 | Status | Deskripsi |
 |---|---|
@@ -350,7 +420,7 @@ Tabel yang ada dan dimigrasikan otomatis:
 
 ---
 
-## 8. Rekomendasi untuk Planning Berikutnya
+## 9. Rekomendasi untuk Planning Berikutnya
 
 1. **Dashboard per Jabatan**: Buat endpoint `GET /dashboard` yang mengembalikan surat berdasarkan kategori & jabatan user.
 2. **Notifikasi**: Tambah WebSocket atau polling untuk notifikasi real-time surat masuk.
