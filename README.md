@@ -28,9 +28,14 @@ DB_USER=postgres
 DB_PASSWORD=secret
 DB_NAME=disposisi_db
 DB_SSLMODE=disable
+
 JWT_SECRET=supersecretjwt
+
 RESEND_API_KEY=<api-key-resend>
 RESEND_EMAIL=<email-pengirim>
+
+APP_PORT=7000
+CORS_ALLOW_ORIGINS=*
 ```
 
 ## Inisialisasi
@@ -108,3 +113,20 @@ Aplikasi akan berjalan di `http://localhost:7000`.
 - Form `POST /surat/upload` harus mengirimkan field `file`, `kategori`, `judul`, `deskripsi`, dan `tujuan_id`.
 - Email harus valid pada registrasi, login, OTP, dan reset password.
 - Gunakan token `Authorization: Bearer <token>` pada endpoint yang dilindungi.
+
+## Hosting Production
+
+1. **VPS / Server**: Deploy binary ke VPS (DigitalOcean, AWS EC2, dll)
+2. **Database**: PostgreSQL bisa di server yang sama atau terpisah
+3. **File `.env`**: sesuaikan `DB_HOST`, `DB_PASSWORD`, `DB_SSLMODE=require` jika DB terpisah
+4. **CORS**: set `CORS_ALLOW_ORIGINS` dengan domain frontend (pisah dengan koma) atau `*` untuk development
+5. **Upload**: folder `uploads/` dibuat otomatis saat pertama jalan
+6. **Systemd** (opsional): daftarkan sebagai service agar auto-restart
+
+Contoh deploy:
+```bash
+go build -o disposisi-backend .
+scp disposisi-backend user@server:~/
+scp -r .env user@server:~/
+ssh user@server './disposisi-backend'
+```

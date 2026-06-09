@@ -70,14 +70,20 @@ func ConnectDB() {
 
 	log.Println("Database berhasil terhubung")
 
-	_ = models.User{}
-	_ = models.Jabatan{}
-	_ = models.UserJabatan{}
-	_ = models.OTP{}
-	_ = models.SuratMasuk{}
-	_ = models.SuratKeluar{}
-	_ = models.Disposisi{}
-	_ = models.DistribusiSK{}
-	_ = models.Notifikasi{}
-	_ = models.Log{}
+	err = DB.AutoMigrate(
+		&models.User{},
+		&models.Jabatan{},
+		&models.UserJabatan{},
+		&models.OTP{},
+		&models.SuratMasuk{},
+		&models.SuratKeluar{},
+		&models.Disposisi{},
+		&models.Notifikasi{},
+		&models.Log{},
+	)
+	if err != nil {
+		log.Fatal("Gagal migrasi database:", err)
+	}
+
+	log.Println("Migrasi database berhasil")
 }

@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"os"
+	"strings"
 
 	"github.com/fiorelln/disposisi/config"
 	"github.com/fiorelln/disposisi/controllers"
@@ -36,28 +38,27 @@ func main() {
 	routes.SuratKeluarCtrl = controllers.NewSuratKeluarController(suratKeluarSvc)
 	routes.DisposisiCtrl = controllers.NewDisposisiController(disposisiSvc)
 
+	os.MkdirAll("uploads/surat_masuk", os.ModePerm)
+	os.MkdirAll("uploads/surat_keluar", os.ModePerm)
+
 	r := gin.Default()
 
+	origins := os.Getenv("CORS_ALLOW_ORIGINS")
+	if origins == "" {
+		origins = "*"
+	}
 	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{
-			"http://127.0.0.1:5500",
-			"http://localhost:5500",
-		},
-		AllowMethods: []string{
-			"GET",
-			"POST",
-			"PUT",
-			"DELETE",
-			"OPTIONS",
-		},
-		AllowHeaders: []string{
-			"Content-Type",
-			"Authorization",
-		},
-		AllowCredentials: true,
+		AllowOrigins:     strings.Split(origins, ","),
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Content-Type", "Authorization"},
+		AllowCredentials: origins != "*",
 	}))
 
 	routes.SetupRoutes(r)
 
-	r.Run(":7000")
+	port := os.Getenv("APP_PORT")
+	if port == "" {
+		port = "7000"
+	}
+	r.Run(":" + port)
 }
