@@ -5,7 +5,74 @@
 ## Overview
 Dokumentasi lengkap semua API yang terimplementasi di backend `disposisi-backend`. Endpoint sudah menyertakan middleware auth dan alur bisnis disposisi surat.
 
-Base URL: `http://localhost:7000`
+Base URLs:
+- Lokal: `http://localhost:7000`
+- Production: `https://disposisi-backend-production.up.railway.app`
+- Mobile: `https://disposisi-backend-production.up.railway.app/api/v1/mobile`
+- Web: `https://disposisi-backend-production.up.railway.app/api/v1/web`
+- Desktop: `https://disposisi-backend-production.up.railway.app/api/v1/desktop`
+
+---
+
+## Daftar Lengkap Endpoint
+
+### Auth (No Token Required)
+| Method | Endpoint |
+|--------|----------|
+| POST | `/auth/login` |
+| POST | `/auth/forgot-password` |
+| POST | `/auth/verify-otp` |
+| POST | `/auth/reset-password` |
+
+### Surat Masuk (Token Required)
+| Method | Endpoint | Role |
+|--------|----------|------|
+| POST | `/:platform/surat-masuk` | admin, TU |
+| POST | `/:platform/surat-masuk/:id/forward-to-principal` | admin, TU |
+| POST | `/:platform/surat-masuk/:id/review` | kepala sekolah |
+| POST | `/:platform/surat-masuk/:id/distribute` | admin, TU |
+| GET | `/:platform/surat-masuk/:id` | all |
+| GET | `/:platform/surat-masuk/:id/download` | all |
+| GET | `/:platform/surat-masuk` | all |
+| GET | `/:platform/surat-masuk/inbox/distribusi` | all |
+
+### Surat Keluar (Token Required)
+| Method | Endpoint | Role |
+|--------|----------|------|
+| POST | `/:platform/surat-keluar` | admin, TU |
+| POST | `/:platform/surat-keluar/:id/submit-to-principal` | admin, TU |
+| POST | `/:platform/surat-keluar/:id/review` | kepala sekolah |
+| POST | `/:platform/surat-keluar/:id/finalize` | admin, TU |
+| GET | `/:platform/surat-keluar/:id` | all |
+| GET | `/:platform/surat-keluar/:id/download` | all |
+| GET | `/:platform/surat-keluar` | all |
+
+### Disposisi (Token Required)
+| Method | Endpoint | Role |
+|--------|----------|------|
+| GET | `/:platform/disposisi/inbox` | all |
+| GET | `/:platform/disposisi/sent` | all |
+| GET | `/:platform/disposisi/stats` | all |
+| GET | `/:platform/disposisi/:id` | all |
+| POST | `/:platform/disposisi/:id/read` | all |
+| POST | `/:platform/disposisi/:id/waka-action` | waka/* |
+| POST | `/:platform/disposisi/:id/complete` | all |
+
+> `:platform` = `api/v1/mobile`, `api/v1/web`, atau `api/v1/desktop`
+>
+> Contoh: `POST /api/v1/web/surat-masuk`, `GET /api/v1/mobile/disposisi/inbox`
+
+### Dashboard (Token Required)
+| Method | Endpoint | Role |
+|--------|----------|------|
+| GET | `/:platform/dashboard` | all |
+
+### Lainnya
+| Method | Endpoint | Keterangan |
+|--------|----------|------------|
+| GET | `/surat/:surat_id/history` | Riwayat disposisi surat |
+| GET | `/docs` | Dokumentasi UI |
+| GET | `/openapi.yaml` | File OpenAPI spec |
 
 ---
 
@@ -145,58 +212,18 @@ TU create (diterima_tu)
             → TU finalize/arsip (selesai)
 ```
 
-### 3.1 POST /surat/upload 
-- Deskripsi: Upload file PDF surat.
+### 3.1 POST /surat-masuk
+- Deskripsi: Mendaftarkan surat masuk baru (TU).
+- Autentikasi: **Bearer token required** (role: admin, Tata Usaha)
+- File otomatis dikompres (JPEG/PNG dikompres, PDF dioptimalkan)
+- Maksimal 10MB
+
+### 3.2 GET /surat-masuk/:id/download
+- Deskripsi: Download file surat masuk.
 - Autentikasi: **Bearer token required**
 
-Request form-data:
-- `file`: PDF file (max 5MB)
-- `kategori`: string (required)
-- `judul`: string (required)
-- `deskripsi`: string (optional)
-- `tujuan_id`: uint (required) - ID user yang dituju
-
-Response sukses (200):
-```json
-{
-  "message": "Upload surat berhasil",
-  "surat": {
-    "id": 1,
-    "file_surat": "uploads/surat/1234567890_filename.pdf",
-    "status": "dikirim",
-    "pengirim_id": 5,
-    "tujuan_id": 3,
-    "kategori": "Pengumuman",
-    "judul": "Judul Surat",
-    "deskripsi": "Deskripsi surat"
-  }
-}
-```
-
-Response error:
-- 400: `File wajib diupload`
-- 400: `File harus PDF`
-- 400: `Ukuran file maksimal 5MB`
-- 400: `MIME type harus PDF`
-- 400: form data tidak valid
-- 500: gagal upload file
-
-**Validasi**:
-- File extension harus `.pdf`
-- Ukuran max 5MB
-- MIME type harus `application/pdf`
-
-**Alur Surat Masuk**:
-```
-TU register → TU forward ke Kepsek → Kepsek review →
-  ├── ditolak → selesai (arsip)
-  └── disetujui → kembali ke TU (disetujui_kembali_ke_tu) →
-       TU distribusi ke Waka (by jabatan: waka kesiswaan, kurikulum, sarpras, humas) →
-       Waka disposisi ke Staff (individual) → Staff selesai
-```
-
-### 3.2 GET /surat/:surat_id 
-- Deskripsi: Melihat detail surat.
+### 3.4 GET /surat-masuk/:id
+- Deskripsi: Melihat detail surat masuk.
 - Autentikasi: **Bearer token required**
 
 Response sukses (200):
@@ -218,7 +245,7 @@ Response sukses (200):
 }
 ```
 
-### 3.3 GET /surat (Query parameters) 
+### 3.5 GET /surat-masuk (Query parameters) 
 - Deskripsi: List surat milik user (sebagai pengirim atau tujuan).
 - Autentikasi: **Bearer token required**
 
@@ -349,12 +376,17 @@ Response sukses (200):
 ### 5.1 POST /surat-keluar
 - Deskripsi: Membuat draft surat keluar (TU).
 - Autentikasi: **Bearer token required** (role: admin, Tata Usaha)
+- File otomatis dikompres
 
-### 5.2 POST /surat-keluar/:id/submit-to-principal
+### 5.2 GET /surat-keluar/:id/download
+- Deskripsi: Download file surat keluar.
+- Autentikasi: **Bearer token required**
+
+### 5.3 POST /surat-keluar/:id/submit-to-principal
 - Deskripsi: Mengajukan surat keluar ke Kepala Sekolah.
 - Autentikasi: **Bearer token required** (role: admin, Tata Usaha)
 
-### 5.3 POST /surat-keluar/:id/review
+### 5.4 POST /surat-keluar/:id/review
 - Deskripsi: Kepala Sekolah menyetujui/menolak surat keluar.
 - Autentikasi: **Bearer token required** (role: kepala sekolah)
 

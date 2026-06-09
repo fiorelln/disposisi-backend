@@ -13,75 +13,99 @@ var (
 )
 
 func SetupRoutes(r *gin.Engine) {
-	AuthRoutes(r)
-	SuratMasukRoutes(r)
-	SuratKeluarRoutes(r)
-	DisposisiRoutes(r)
-	DashboardRoutes(r)
-	DocsRoutes(r)
-}
-
-func AuthRoutes(r *gin.Engine) {
 	auth := r.Group("/auth")
 	auth.POST("/login", controllers.Login)
 	auth.POST("/forgot-password", controllers.ForgotPassword)
 	auth.POST("/verify-otp", controllers.VerifyOTP)
 	auth.POST("/reset-password", controllers.ResetPassword)
+
+	registerPlatformRoutes(r)
 }
 
-func SuratMasukRoutes(r *gin.Engine) {
-	sm := r.Group("/surat-masuk")
-	sm.Use(middlewares.AuthMiddleware())
+func registerPlatformRoutes(r *gin.Engine) {
+	platforms := []string{
+		"surat-masuk",
+		"surat-keluar",
+		"disposisi",
+		"dashboard",
+	}
 
-	sm.POST("", middlewares.RoleMiddleware("admin", "Tata Usaha"), SuratMasukCtrl.Register)
-	sm.POST("/:id/forward-to-principal", middlewares.RoleMiddleware("admin", "Tata Usaha"), SuratMasukCtrl.ForwardToPrincipal)
-	sm.POST("/:id/review", middlewares.RoleMiddleware("kepala sekolah"), SuratMasukCtrl.Review)
-	sm.POST("/:id/distribute", middlewares.RoleMiddleware("admin", "Tata Usaha"), SuratMasukCtrl.DistributeToUser)
-	sm.GET("/:id", SuratMasukCtrl.GetByID)
-	sm.GET("", SuratMasukCtrl.List)
-	sm.GET("/inbox/distribusi", SuratMasukCtrl.GetInboxDistribusi)
+	for _, p := range platforms {
+		registerPlatform(r, "api/v1/desktop/"+p)
+		registerPlatform(r, "api/v1/web/"+p)
+		registerPlatform(r, "api/v1/mobile/"+p)
+	}
+
+	registerHistory(r.Group("/surat"))
+	registerDocs(r)
 }
 
-func SuratKeluarRoutes(r *gin.Engine) {
-	sk := r.Group("/surat-keluar")
-	sk.Use(middlewares.AuthMiddleware())
+func registerPlatform(r *gin.Engine, base string) {
+	g := r.Group("/" + base)
+	g.Use(middlewares.AuthMiddleware())
 
-	sk.POST("", middlewares.RoleMiddleware("admin", "Tata Usaha"), SuratKeluarCtrl.Create)
-	sk.POST("/:id/submit-to-principal", middlewares.RoleMiddleware("admin", "Tata Usaha"), SuratKeluarCtrl.SubmitToPrincipal)
-	sk.POST("/:id/review", middlewares.RoleMiddleware("kepala sekolah"), SuratKeluarCtrl.Review)
-	sk.POST("/:id/finalize", middlewares.RoleMiddleware("admin", "Tata Usaha"), SuratKeluarCtrl.Finalize)
-	sk.GET("/:id", SuratKeluarCtrl.GetByID)
-	sk.GET("", SuratKeluarCtrl.List)
+	switch {
+	case contains(base, "surat-masuk"):
+		registerSuratMasuk(g)
+	case contains(base, "surat-keluar"):
+		registerSuratKeluar(g)
+	case contains(base, "disposisi"):
+		registerDisposisi(g)
+	case contains(base, "dashboard"):
+		g.GET("", controllers.Dashboard)
+	}
 }
 
-func DisposisiRoutes(r *gin.Engine) {
-	d := r.Group("/disposisi")
-	d.Use(middlewares.AuthMiddleware())
-
-	d.GET("/inbox", DisposisiCtrl.GetInbox)
-	d.GET("/sent", DisposisiCtrl.GetSentItems)
-	d.GET("/stats", DisposisiCtrl.GetStats)
-	d.GET("/:id", DisposisiCtrl.GetDetail)
-	d.POST("/:id/read", DisposisiCtrl.MarkAsRead)
-	d.POST("/:id/waka-action", middlewares.RoleMiddleware("waka kesiswaan", "waka kurikulum", "waka sarpras", "waka humas", "bk", "kapro rpl", "kapro tkj", "kapro dkv", "kapro an", "kapro ei", "kapro mt", "kapro av", "kapro bc", "bkk", "prakerin"), DisposisiCtrl.WakaAction)
-	d.POST("/:id/complete", DisposisiCtrl.CompleteDisposisi)
-
-	sm := r.Group("/surat")
-	sm.Use(middlewares.AuthMiddleware())
-	sm.GET("/:surat_id/history", DisposisiCtrl.GetHistory)
+func registerSuratMasuk(g *gin.RouterGroup) {
+	tu := []string{"admin", "Tata Usaha"}
+	g.POST("", middlewares.RoleMiddleware(tu...), SuratMasukCtrl.Register)
+	g.POST("/:id/forward-to-principal", middlewares.RoleMiddleware(tu...), SuratMasukCtrl.ForwardToPrincipal)
+	g.POST("/:id/review", middlewares.RoleMiddleware("kepala sekolah"), SuratMasukCtrl.Review)
+	g.POST("/:id/distribute", middlewares.RoleMiddleware(tu...), SuratMasukCtrl.DistributeToUser)
+	g.GET("/:id", SuratMasukCtrl.GetByID)
+	g.GET("/:id/download", SuratMasukCtrl.Download)
+	g.GET("", SuratMasukCtrl.List)
+	g.GET("/inbox/distribusi", SuratMasukCtrl.GetInboxDistribusi)
 }
 
-func DashboardRoutes(r *gin.Engine) {
-	d := r.Group("/dashboard")
-	d.Use(middlewares.AuthMiddleware())
-	d.GET("", controllers.Dashboard)
+func registerSuratKeluar(g *gin.RouterGroup) {
+	tu := []string{"admin", "Tata Usaha"}
+	g.POST("", middlewares.RoleMiddleware(tu...), SuratKeluarCtrl.Create)
+	g.POST("/:id/submit-to-principal", middlewares.RoleMiddleware(tu...), SuratKeluarCtrl.SubmitToPrincipal)
+	g.POST("/:id/review", middlewares.RoleMiddleware("kepala sekolah"), SuratKeluarCtrl.Review)
+	g.POST("/:id/finalize", middlewares.RoleMiddleware(tu...), SuratKeluarCtrl.Finalize)
+	g.GET("/:id", SuratKeluarCtrl.GetByID)
+	g.GET("/:id/download", SuratKeluarCtrl.Download)
+	g.GET("", SuratKeluarCtrl.List)
 }
 
-func DocsRoutes(r *gin.Engine) {
+func registerDisposisi(g *gin.RouterGroup) {
+	wakaRoles := []string{"waka kesiswaan", "waka kurikulum", "waka sarpras", "waka humas", "bk",
+		"kapro rpl", "kapro tkj", "kapro dkv", "kapro an", "kapro ei",
+		"kapro mt", "kapro av", "kapro bc", "bkk", "prakerin"}
+	g.GET("/inbox", DisposisiCtrl.GetInbox)
+	g.GET("/sent", DisposisiCtrl.GetSentItems)
+	g.GET("/stats", DisposisiCtrl.GetStats)
+	g.GET("/:id", DisposisiCtrl.GetDetail)
+	g.POST("/:id/read", DisposisiCtrl.MarkAsRead)
+	g.POST("/:id/waka-action", middlewares.RoleMiddleware(wakaRoles...), DisposisiCtrl.WakaAction)
+	g.POST("/:id/complete", DisposisiCtrl.CompleteDisposisi)
+}
+
+func registerHistory(g *gin.RouterGroup) {
+	g.Use(middlewares.AuthMiddleware())
+	g.GET("/:surat_id/history", DisposisiCtrl.GetHistory)
+}
+
+func registerDocs(r *gin.Engine) {
 	r.GET("/docs", func(c *gin.Context) {
 		c.File("docs/index.html")
 	})
 	r.GET("/openapi.yaml", func(c *gin.Context) {
 		c.File("openapi.yaml")
 	})
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && s[len(s)-len(substr):] == substr
 }

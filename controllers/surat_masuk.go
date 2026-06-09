@@ -9,12 +9,13 @@ import (
 	"time"
 
 	"github.com/fiorelln/disposisi/config"
+	"github.com/fiorelln/disposisi/helpers"
 	"github.com/fiorelln/disposisi/models"
 	"github.com/fiorelln/disposisi/services"
 	"github.com/gin-gonic/gin"
 )
 
-const maxFileSize = 1 << 20
+const maxFileSize = 10 << 20
 
 type SuratMasukController struct {
 	service      services.SuratMasukService
@@ -66,6 +67,8 @@ func (ctrl *SuratMasukController) Register(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	helpers.CompressFile(path)
 
 	c.JSON(http.StatusOK, gin.H{"message": "surat masuk berhasil didaftarkan", "data": surat})
 }
@@ -156,6 +159,19 @@ func (ctrl *SuratMasukController) GetByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": surat})
+}
+
+func (ctrl *SuratMasukController) Download(c *gin.Context) {
+	idStr := c.Param("id")
+	id, _ := strconv.ParseUint(idStr, 10, 32)
+
+	surat, err := ctrl.service.GetByID(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "surat tidak ditemukan"})
+		return
+	}
+
+	c.FileAttachment(surat.FilePDF, filepath.Base(surat.FilePDF))
 }
 
 func (ctrl *SuratMasukController) List(c *gin.Context) {

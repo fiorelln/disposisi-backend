@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/fiorelln/disposisi/helpers"
 	"github.com/fiorelln/disposisi/services"
 	"github.com/gin-gonic/gin"
 )
@@ -62,6 +63,8 @@ func (ctrl *SuratKeluarController) Create(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	helpers.CompressFile(path)
 
 	c.JSON(http.StatusOK, gin.H{"message": "draft surat keluar berhasil dibuat", "data": surat})
 }
@@ -134,6 +137,19 @@ func (ctrl *SuratKeluarController) Finalize(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "surat keluar berhasil diarsipkan"})
+}
+
+func (ctrl *SuratKeluarController) Download(c *gin.Context) {
+	idStr := c.Param("id")
+	id, _ := strconv.ParseUint(idStr, 10, 32)
+
+	surat, err := ctrl.service.GetByID(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "surat tidak ditemukan"})
+		return
+	}
+
+	c.FileAttachment(surat.FilePDF, filepath.Base(surat.FilePDF))
 }
 
 func (ctrl *SuratKeluarController) List(c *gin.Context) {

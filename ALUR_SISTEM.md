@@ -2,7 +2,7 @@
 
 Sistem Informasi Disposisi Surat Sekolah merupakan sistem digital yang dirancang untuk mengelola seluruh proses administrasi surat masuk dan surat keluar di lingkungan sekolah secara terstruktur, terkontrol, dan berbasis jabatan. Sistem ini tidak hanya mencatat surat, tetapi juga mengatur alur distribusi surat secara spesifik berdasarkan peran dan jabatan pengguna dalam organisasi sekolah.
 
-Dalam sistem ini, setiap surat tidak hanya diteruskan secara umum, tetapi **didistribusikan secara individu sesuai jabatan yang ditentukan**, terutama pada tahap Wakil Kepala Sekolah (Waka) dan Staff, sehingga setiap bagian hanya menerima surat yang relevan dengan tanggung jawabnya.
+Dalam sistem ini, setiap surat tidak hanya diteruskan secara umum, tetapi **didistribusikan secara individu kepada user tertentu**, terutama pada tahap Wakil Kepala Sekolah (Waka) dan Staff, sehingga setiap pengguna hanya menerima surat yang relevan dengan tanggung jawabnya.
 
 ---
 
@@ -18,18 +18,18 @@ Apabila surat **disetujui**, maka surat dikembalikan kepada TU untuk dilanjutkan
 
 ---
 
-## Distribusi Surat oleh TU ke Waka (Berdasarkan Jabatan)
+## Distribusi Surat oleh TU ke Waka (Per Individu)
 
-Setelah surat mendapatkan persetujuan dari Kepala Sekolah, TU tidak langsung meneruskan surat secara umum, melainkan melakukan proses distribusi berdasarkan jabatan Wakil Kepala Sekolah yang sesuai dengan isi dan tujuan surat.
+Setelah surat mendapatkan persetujuan dari Kepala Sekolah, TU tidak langsung meneruskan surat secara umum, melainkan melakukan proses distribusi secara individu kepada user Waka yang sesuai dengan isi dan tujuan surat.
 
-Dalam proses ini, TU menentukan Waka yang paling relevan dengan isi surat, seperti:
+Dalam proses ini, TU menentukan user Waka yang paling relevan dengan isi surat, seperti:
 
-- Waka Kurikulum
-- Waka Kesiswaan
-- Waka Humas
-- Waka Sarpras
+- User Waka Kurikulum
+- User Waka Kesiswaan
+- User Waka Humas
+- User Waka Sarpras
 
-Setiap Waka hanya menerima surat yang sesuai dengan bidang tanggung jawabnya masing-masing. Dengan demikian, distribusi surat menjadi lebih terarah, selektif, dan tidak tumpang tindih antar bidang.
+Setiap user Waka hanya menerima surat yang sesuai dengan bidang tanggung jawabnya masing-masing. Dengan demikian, distribusi surat menjadi lebih terarah, selektif, dan tidak tumpang tindih antar bidang.
 
 Mekanisme ini menjadikan TU sebagai pengendali utama dalam penyaringan dan pengarah awal alur surat berdasarkan struktur organisasi sekolah.
 
@@ -62,7 +62,7 @@ Dengan pola ini, pembagian kerja menjadi lebih jelas, terstruktur, dan tidak ter
 
 Secara keseluruhan, alur sistem surat masuk berjalan sebagai berikut:
 
-**TU → Kepala Sekolah → TU → Waka (sesuai jabatan) → Staff (distribusi individual) → Selesai**
+**TU → Kepala Sekolah → TU → Waka (per individu) → Staff (per individu) → Selesai**
 
 Alur ini memastikan setiap surat memiliki jejak proses yang jelas, dapat ditelusuri, dan terdokumentasi secara lengkap dalam sistem.
 
@@ -86,7 +86,7 @@ Alur surat keluar secara ringkas adalah:
 
 Sistem ini memiliki beberapa karakteristik utama, yaitu:
 
-- Distribusi surat berbasis jabatan (role-based distribution)
+- Distribusi surat per individu user (bukan sekedar jabatan)
 - Penugasan Staff secara individual oleh Waka
 - Pengendalian penuh pada TU dan Kepala Sekolah
 - Setiap surat memiliki alur dan riwayat yang dapat dilacak
@@ -97,6 +97,6 @@ Sistem ini memiliki beberapa karakteristik utama, yaitu:
 
 ## Kesimpulan
 
-Sistem Informasi Disposisi Surat Sekolah dirancang untuk menciptakan alur administrasi surat yang lebih terstruktur, efisien, dan terdokumentasi dengan baik. Dengan penerapan distribusi berbasis jabatan, setiap surat hanya diteruskan kepada pihak yang relevan sesuai tanggung jawabnya.
+Sistem Informasi Disposisi Surat Sekolah dirancang untuk menciptakan alur administrasi surat yang lebih terstruktur, efisien, dan terdokumentasi dengan baik. Dengan penerapan distribusi per individu, setiap surat hanya diteruskan kepada user yang relevan sesuai tanggung jawabnya.
 
 Selain itu, mekanisme disposisi secara individual dari Waka kepada Staff memastikan bahwa setiap tugas yang berasal dari surat benar-benar ditangani oleh pihak yang tepat, sehingga meningkatkan efektivitas kerja, mengurangi kesalahan distribusi, serta memperjelas alur tanggung jawab dalam organisasi sekolah.
