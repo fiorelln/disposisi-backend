@@ -93,12 +93,21 @@ func (ctrl *SuratKeluarController) Review(c *gin.Context) {
 		return
 	}
 
+	if input.Status != "disetujui" && input.Status != "ditolak" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "status harus 'disetujui' atau 'ditolak'"})
+		return
+	}
+
 	if err := ctrl.service.Review(uint(id), userID, input.Status, input.Notes); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "surat keluar berhasil ditinjau"})
+	msg := "surat keluar berhasil disetujui"
+	if input.Status == "ditolak" {
+		msg = "surat keluar ditolak"
+	}
+	c.JSON(http.StatusOK, gin.H{"message": msg})
 }
 
 func (ctrl *SuratKeluarController) GetByID(c *gin.Context) {

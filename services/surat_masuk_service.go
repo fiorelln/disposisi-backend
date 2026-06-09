@@ -6,12 +6,14 @@ import (
 
 	"github.com/fiorelln/disposisi/models"
 	"github.com/fiorelln/disposisi/repositories"
+	"gorm.io/gorm"
 )
 
 type SuratMasukService interface {
 	Register(noSurat, perihal, asal string, filePDF string) (*models.SuratMasuk, error)
-	ForwardToPrincipal(suratID uint) error
-	Review(suratID uint, kepsekID uint, approvalStatus string, catatan string, tanggapan string, proses string, koordinasi string) error
+	ForwardToPrincipal(suratID uint, tuUserID uint) error
+	Review(suratID uint, kepsekID uint, statusApproval string, catatan string) error
+	DistributeToUser(suratID uint, tuUserID uint, penerimaID uint, jabatanPenerimaID uint, catatan string) (*models.Disposisi, error)
 	GetByID(id uint) (*models.SuratMasuk, error)
 	List(page, pageSize int, status string) ([]models.SuratMasuk, int64, error)
 }
@@ -19,15 +21,18 @@ type SuratMasukService interface {
 type suratMasukService struct {
 	suratRepo     repositories.SuratMasukRepository
 	disposisiRepo repositories.DisposisiRepository
+	db            *gorm.DB
 }
 
 func NewSuratMasukService(
 	suratRepo repositories.SuratMasukRepository,
 	disposisiRepo repositories.DisposisiRepository,
+	db *gorm.DB,
 ) SuratMasukService {
 	return &suratMasukService{
 		suratRepo:     suratRepo,
 		disposisiRepo: disposisiRepo,
+		db:            db,
 	}
 }
 
@@ -40,6 +45,7 @@ func (s *suratMasukService) Register(noSurat, perihal, asal string, filePDF stri
 		FilePDF:         filePDF,
 		TanggalSurat:    &now,
 		TanggalDiterima: &now,
+		StatusVerifikasi: "menunggu",
 		StatusAlur:      "diterima_tu",
 		CreatedAt:       now,
 		UpdatedAt:       now,
@@ -50,76 +56,105 @@ func (s *suratMasukService) Register(noSurat, perihal, asal string, filePDF stri
 	return surat, nil
 }
 
-func (s *suratMasukService) ForwardToPrincipal(suratID uint) error {
+func (s *suratMasukService) ForwardToPrincipal(suratID uint, tuUserID uint) error {
 	surat, err := s.suratRepo.GetByID(suratID)
 	if err != nil {
 		return err
 	}
 
 	if surat.StatusAlur != "diterima_tu" {
-		return errors.New("surat tidak dapat diteruskan ke kepala sekolah pada tahap ini")
+		return errors.New("surat tidak dapat diteruskan ke Kepala Sekolah pada tahap ini")
 	}
 
-	principalID := uint(1)
+	var principal models.User
+	if err := s.db.Joins("JOIN user_jabatan ON user_jabatan.id_user = users.id").
+		Joins("JOIN jabatan ON jabatan.id_jabatan = user_jabatan.id_jabatan").
+		Where("jabatan.nama_jabatan = ?", "kepala sekolah").
+		First(&principal).Error; err != nil {
+		return errors.New("tidak ditemukan user dengan jabatan Kepala Sekolah")
+	}
 
 	disposisi := &models.Disposisi{
-		SuratMasukID: suratID,
-		FromUserID:   1,
-		ToUserID:     principalID,
-		Status:       models.StatusPending,
-		Sifat:        "segera",
-		Dibaca:       false,
-		Catatan:      "",
+		SuratMasukID:    suratID,
+		KepsekID:        &principal.ID,
+		StatusDisposisi: "belum_dibaca",
+		StatusApproval:  "menunggu",
 	}
 
 	if err := s.disposisiRepo.Create(disposisi); err != nil {
 		return err
 	}
 
-	if err := s.suratRepo.SetDisposisiAktif(suratID, disposisi.ID); err != nil {
-		return err
-	}
-
 	return s.suratRepo.UpdateStatusAlur(suratID, "disposisi_kepsek")
 }
 
-func (s *suratMasukService) Review(suratID uint, kepsekID uint, approvalStatus string, catatan string, tanggapan string, proses string, koordinasi string) error {
+func (s *suratMasukService) Review(suratID uint, kepsekID uint, statusApproval string, catatan string) error {
 	surat, err := s.suratRepo.GetByID(suratID)
 	if err != nil {
 		return err
 	}
 
-	if surat.IDDisposisiAktif == nil {
-		return errors.New("tidak ditemukan record disposisi aktif untuk surat ini")
+	if surat.StatusAlur != "disposisi_kepsek" {
+		return errors.New("surat tidak dalam tahap disposisi Kepala Sekolah")
 	}
 
-	disposisi, err := s.disposisiRepo.GetByID(*surat.IDDisposisiAktif)
-	if err != nil {
-		return err
+	var disposisi models.Disposisi
+	if err := s.db.Where("id_surat_masuk = ? AND id_kepsek = ? AND status_approval = ?",
+		suratID, kepsekID, "menunggu").
+		First(&disposisi).Error; err != nil {
+		return errors.New("tidak ditemukan disposisi yang menunggu persetujuan anda")
 	}
 
-	disposisi.TanggapanSaran = tanggapan
-	disposisi.ProsesLanjut = proses
-	disposisi.KoordinasiKonfirmasi = koordinasi
-	disposisi.Catatan = catatan
-	if approvalStatus == "disetujui" {
-		disposisi.Status = models.StatusCompleted
-	} else {
-		disposisi.Status = models.StatusRejected
-	}
-	disposisi.FromUserID = kepsekID
 	now := time.Now()
-	disposisi.CompleteAt = &now
-	disposisi.Dibaca = true
 
-	if err := s.disposisiRepo.Update(disposisi); err != nil {
-		return err
+	if statusApproval == "disetujui" {
+		updates := map[string]interface{}{
+			"status_approval": "disetujui",
+			"approval_at":     now,
+			"catatan_kepsek":  catatan,
+		}
+		s.db.Model(&disposisi).Updates(updates)
+
+		s.suratRepo.Verify(suratID, kepsekID, "disetujui", catatan)
+		return s.suratRepo.UpdateStatusAlur(suratID, "diteruskan")
 	}
 
-	return s.suratRepo.UpdateStatusAlur(suratID, "diteruskan")
+	updates := map[string]interface{}{
+		"status_approval":  "ditolak",
+		"approval_at":      now,
+		"catatan_kepsek":   catatan,
+		"status_disposisi": "selesai",
+	}
+	s.db.Model(&disposisi).Updates(updates)
+
+	s.suratRepo.Verify(suratID, kepsekID, "ditolak", catatan)
+	return s.suratRepo.UpdateStatusAlur(suratID, "selesai")
 }
 
+func (s *suratMasukService) DistributeToUser(suratID uint, tuUserID uint, penerimaID uint, jabatanPenerimaID uint, catatan string) (*models.Disposisi, error) {
+	surat, err := s.suratRepo.GetByID(suratID)
+	if err != nil {
+		return nil, err
+	}
 
+	if surat.StatusAlur != "diteruskan" {
+		return nil, errors.New("surat harus disetujui Kepala Sekolah terlebih dahulu")
+	}
+
+	disposisi := &models.Disposisi{
+		SuratMasukID:      suratID,
+		PenerimaID:        &penerimaID,
+		JabatanPenerimaID: &jabatanPenerimaID,
+		StatusDisposisi:   "belum_dibaca",
+		CatatanKepsek:     catatan,
+	}
+
+	if err := s.disposisiRepo.Create(disposisi); err != nil {
+		return nil, err
+	}
+
+	return disposisi, nil
+}
 
 func (s *suratMasukService) GetByID(id uint) (*models.SuratMasuk, error) {
 	return s.suratRepo.GetByID(id)

@@ -105,9 +105,27 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	token, _ := helpers.GenerateToken(user.ID, []string{})
+	var userJabatans []models.UserJabatan
+	config.DB.Where("id_user = ?", user.ID).Find(&userJabatans)
 
-	c.JSON(200, gin.H{"token": token})
+	roles := []string{}
+	for _, uj := range userJabatans {
+		var jabatan models.Jabatan
+		if err := config.DB.First(&jabatan, uj.JabatanID).Error; err == nil {
+			roles = append(roles, jabatan.NamaJabatan)
+		}
+	}
+
+	token, _ := helpers.GenerateToken(user.ID, roles)
+
+	c.JSON(200, gin.H{
+		"token": token,
+		"user": gin.H{
+			"id":    user.ID,
+			"name":  user.Name,
+			"email": user.Email,
+		},
+	})
 }
 
 func generateOTP() string {

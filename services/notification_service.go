@@ -12,7 +12,6 @@ type NotificationService interface {
 	NotifyDisposisiReceived(disposisiID uint, recipientID uint) error
 	NotifyDisposisiCompleted(disposisiID uint, senderID uint) error
 	NotifyDisposisiRejected(disposisiID uint, senderID uint) error
-	NotifyDisposisiForwarded(disposisiID uint, newRecipientID uint) error
 }
 
 type NotificationServiceImpl struct {
@@ -25,9 +24,7 @@ func NewNotificationService(db *gorm.DB) NotificationService {
 
 func (s *NotificationServiceImpl) NotifyDisposisiReceived(disposisiID uint, recipientID uint) error {
 	var disposisi models.Disposisi
-
 	if err := s.db.
-		Preload("FromUser").
 		Preload("SuratMasuk").
 		First(&disposisi, disposisiID).Error; err != nil {
 		return fmt.Errorf("failed to get disposisi: %w", err)
@@ -38,8 +35,7 @@ func (s *NotificationServiceImpl) NotifyDisposisiReceived(disposisiID uint, reci
 		Jenis:      "disposisi_received",
 		Judul:      "Disposisi Baru Diterima",
 		Pesan: fmt.Sprintf(
-			"Anda menerima disposisi dari %s tentang surat %s",
-			disposisi.FromUser.Name,
+			"Anda menerima disposisi tentang surat %s",
 			disposisi.SuratMasuk.NoSurat,
 		),
 		IsRead:    false,
@@ -56,18 +52,14 @@ func (s *NotificationServiceImpl) NotifyDisposisiReceived(disposisiID uint, reci
 
 func (s *NotificationServiceImpl) NotifyDisposisiCompleted(disposisiID uint, senderID uint) error {
 	var disposisi models.Disposisi
-
 	if err := s.db.
-		Preload("FromUser").
-		Preload("ToUser").
 		Preload("SuratMasuk").
 		First(&disposisi, disposisiID).Error; err != nil {
 		return fmt.Errorf("failed to get disposisi: %w", err)
 	}
 
 	message := fmt.Sprintf(
-		"Disposisi dari Anda kepada %s tentang surat %s telah selesai diproses",
-		disposisi.ToUser.Name,
+		"Disposisi tentang surat %s telah selesai diproses",
 		disposisi.SuratMasuk.NoSurat,
 	)
 
@@ -90,18 +82,14 @@ func (s *NotificationServiceImpl) NotifyDisposisiCompleted(disposisiID uint, sen
 
 func (s *NotificationServiceImpl) NotifyDisposisiRejected(disposisiID uint, senderID uint) error {
 	var disposisi models.Disposisi
-
 	if err := s.db.
-		Preload("FromUser").
-		Preload("ToUser").
 		Preload("SuratMasuk").
 		First(&disposisi, disposisiID).Error; err != nil {
 		return fmt.Errorf("failed to get disposisi: %w", err)
 	}
 
 	message := fmt.Sprintf(
-		"Disposisi dari Anda kepada %s tentang surat %s ditolak",
-		disposisi.ToUser.Name,
+		"Disposisi tentang surat %s ditolak",
 		disposisi.SuratMasuk.NoSurat,
 	)
 
@@ -109,40 +97,6 @@ func (s *NotificationServiceImpl) NotifyDisposisiRejected(disposisiID uint, send
 		IDPenerima: senderID,
 		Jenis:      "disposisi_rejected",
 		Judul:      "Disposisi Ditolak",
-		Pesan:      message,
-		IsRead:     false,
-		CreatedAt:  time.Now(),
-	}
-
-	if err := s.db.Create(notifikasi).Error; err != nil {
-		fmt.Printf("Warning: failed to create notification: %v\n", err)
-		return nil
-	}
-
-	return nil
-}
-
-func (s *NotificationServiceImpl) NotifyDisposisiForwarded(disposisiID uint, newRecipientID uint) error {
-	var disposisi models.Disposisi
-
-	if err := s.db.
-		Preload("FromUser").
-		Preload("ToUser").
-		Preload("SuratMasuk").
-		First(&disposisi, disposisiID).Error; err != nil {
-		return fmt.Errorf("failed to get disposisi: %w", err)
-	}
-
-	message := fmt.Sprintf(
-		"Disposisi tentang surat %s di-forward dari %s",
-		disposisi.SuratMasuk.NoSurat,
-		disposisi.FromUser.Name,
-	)
-
-	notifikasi := &models.Notifikasi{
-		IDPenerima: newRecipientID,
-		Jenis:      "disposisi_forwarded",
-		Judul:      "Disposisi Di-forward",
 		Pesan:      message,
 		IsRead:     false,
 		CreatedAt:  time.Now(),

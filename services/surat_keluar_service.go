@@ -6,6 +6,7 @@ import (
 
 	"github.com/fiorelln/disposisi/models"
 	"github.com/fiorelln/disposisi/repositories"
+	"gorm.io/gorm"
 )
 
 type SuratKeluarService interface {
@@ -18,10 +19,11 @@ type SuratKeluarService interface {
 
 type suratKeluarService struct {
 	suratRepo repositories.SuratKeluarRepository
+	db        *gorm.DB
 }
 
-func NewSuratKeluarService(suratRepo repositories.SuratKeluarRepository) SuratKeluarService {
-	return &suratKeluarService{suratRepo: suratRepo}
+func NewSuratKeluarService(suratRepo repositories.SuratKeluarRepository, db *gorm.DB) SuratKeluarService {
+	return &suratKeluarService{suratRepo: suratRepo, db: db}
 }
 
 func (s *suratKeluarService) Create(noSurat, perihal, catatan, tujuan string, filePDF string) (*models.SuratKeluar, error) {
@@ -46,6 +48,15 @@ func (s *suratKeluarService) Create(noSurat, perihal, catatan, tujuan string, fi
 }
 
 func (s *suratKeluarService) SubmitToPrincipal(suratID uint) error {
+	surat, err := s.suratRepo.GetByID(suratID)
+	if err != nil {
+		return err
+	}
+
+	if surat.StatusAlur != "diterima_tu" {
+		return errors.New("surat tidak dapat diajukan pada tahap ini")
+	}
+
 	return s.suratRepo.UpdateStatusAlur(suratID, "disposisi_kepsek")
 }
 
@@ -54,7 +65,16 @@ func (s *suratKeluarService) Review(suratID uint, principalID uint, status strin
 		return errors.New("status persetujuan tidak valid")
 	}
 
-	err := s.suratRepo.Verify(suratID, principalID, status, notes)
+	surat, err := s.suratRepo.GetByID(suratID)
+	if err != nil {
+		return err
+	}
+
+	if surat.StatusAlur != "disposisi_kepsek" {
+		return errors.New("surat tidak dalam tahap review")
+	}
+
+	err = s.suratRepo.Verify(suratID, principalID, status, notes)
 	if err != nil {
 		return err
 	}
@@ -62,7 +82,8 @@ func (s *suratKeluarService) Review(suratID uint, principalID uint, status strin
 	if status == "disetujui" {
 		return s.suratRepo.UpdateStatusAlur(suratID, "selesai")
 	}
-	return nil
+
+	return s.suratRepo.UpdateStatusAlur(suratID, "selesai")
 }
 
 func (s *suratKeluarService) GetByID(id uint) (*models.SuratKeluar, error) {

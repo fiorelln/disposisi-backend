@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"time"
+
 	"github.com/fiorelln/disposisi/models"
 	"gorm.io/gorm"
 )
@@ -13,6 +15,7 @@ type SuratMasukRepository interface {
 	ListAll(page, pageSize int, status string) ([]models.SuratMasuk, int64, error)
 	UpdateStatusAlur(id uint, status string) error
 	SetDisposisiAktif(id uint, disposisiID uint) error
+	Verify(id uint, userID uint, status string, notes string) error
 }
 
 type suratMasukRepository struct {
@@ -66,4 +69,14 @@ func (r *suratMasukRepository) UpdateStatusAlur(id uint, status string) error {
 
 func (r *suratMasukRepository) SetDisposisiAktif(id uint, disposisiID uint) error {
 	return r.db.Model(&models.SuratMasuk{}).Where("id_surat_masuk = ?", id).Update("id_disposisi_aktif", disposisiID).Error
+}
+
+func (r *suratMasukRepository) Verify(id uint, userID uint, status string, notes string) error {
+	now := time.Now()
+	return r.db.Model(&models.SuratMasuk{}).Where("id_surat_masuk = ?", id).Updates(map[string]interface{}{
+		"user_verifikasi":    userID,
+		"status_verifikasi":  status,
+		"catatan_verifikasi": notes,
+		"tanggal_verifikasi": &now,
+	}).Error
 }
